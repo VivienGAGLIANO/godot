@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+
+Import("env")
+Import("env_modules")
+
+sources = [
+	"register_types.cpp",
+	"texsyn.cpp",
+	"texsyn_sampler.cpp"
+]
+
+env_texsyn = env_modules.Clone()
+
+if ARGUMENTS.get('texsyn_shared', 'no') == 'yes':
+	env_texsyn.Append(CCFLAGS=['-fPIC'])
+	env_texsyn['LIBS'] = []
+	shared_lib = env_texsyn.SharedLibrary(target='#bin/texsyn', source=sources)
+	shared_lib_shim = shared_lib[0].name.rsplit('.', 1)[0]
+	env.Append(LIBS=[shared_lib_shim])
+	env.Append(LIBPATH=['#bin'])
+else:
+	env_texsyn.add_source_files(env.modules_sources, sources)

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="GaussianPyr" inherits="Reference" version="3.6" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd" xmlns:m="http://www.w3.org/1998/Math/MathML">
+	<brief_description>
+		Image pyramid used for multi-scale image analysis.
+	</brief_description>
+	<description>
+		Structure used to analyze images at different levels of scale. Pyramid's layers are created by successive downsizing operation comprised of smoothing and subsampling, applied on an input image.
+		Smoothing kernel used is gaussian : <!--k = [1 4 6 4 1]<sup>T</sup>*[1 4 6 4 1] / 256-->
+<!--		TODO make MathML lib work-->
+		<m:math>
+			<m:mrow>
+				<m:mi>kernel</m:mi>
+				<m:mo>=</m:mo>
+				<m:mfrac>
+					<m:mn>1</m:mn>
+					<m:mn>256</m:mn>
+				</m:mfrac>
+				<m:matrix>
+					<m:matrixrow><m:cn>1</m:cn> <m:cn>4</m:cn> <m:cn>6</m:cn> <m:cn>4</m:cn> <m:cn>1</m:cn></m:matrixrow>
+					<m:matrixrow><m:cn>4</m:cn> <m:cn>16</m:cn> <m:cn>24</m:cn> <m:cn>16</m:cn> <m:cn>4</m:cn></m:matrixrow>
+					<m:matrixrow><m:cn>6</m:cn> <m:cn>24</m:cn> <m:cn>36</m:cn> <m:cn>24</m:cn> <m:cn>6</m:cn></m:matrixrow>
+					<m:matrixrow><m:cn>4</m:cn> <m:cn>16</m:cn> <m:cn>24</m:cn> <m:cn>16</m:cn> <m:cn>4</m:cn></m:matrixrow>
+					<m:matrixrow><m:cn>1</m:cn> <m:cn>4</m:cn> <m:cn>6</m:cn> <m:cn>4</m:cn> <m:cn>1</m:cn></m:matrixrow>
+				</m:matrix>
+			</m:mrow>
+		</m:math>
+		Pyramid's depth represents the number of layers in it, including input image stored at index 0.
+	</description>
+	<methods>
+		<method name="get_layer" qualifiers="const">
+			<return type="Image" />
+			<argument index="0" name="depth" type="int" />
+			<description>
+				Get selected pyramid layer, and returns a copy of it. [code]depth[/code] must be less than pyramid depth.
+			</description>
+		</method>
+		<method name="init">
+			<return type="void" />
+			<argument index="0" name="image" type="Image" />
+			<argument index="1" name="depth" type="int" />
+			<description>
+				Create gaussian pyramid by repeatedly downsizing input image until desired depth. [code]image[/code] size has to be a power of 2, and [code]depth[/code] must verify
+				<m:math>
+					<m:row>
+						<m:apply> <m:leq/>
+							<m:ci>depth</m:ci>
+							<m:apply> <m:plus/>
+								<m:apply> <m:log/>
+									<m:apply> <m:min/>
+										<m:ci>width</m:ci>
+										<m:ci>length</m:ci>
+									</m:apply>
+								</m:apply>
+								<m:cn>1</m:cn>
+							</m:apply>
+						</m:apply>
+					</m:row>
+				</m:math>
+				because each downsize operation halves input size.
+			</description>
+		</method>
+		<method name="init_from_pyramid">
+			<return type="void" />
+			<argument index="0" name="pyramid" type="GaussianPyr" />
+			<description>
+				Create gaussian pyramid by duplicating [code]pyramid[/code] layers in memory.
+			</description>
+		</method>
+	</methods>
+</class>
