@@ -27,6 +27,7 @@ public:
 	void set_sampler(SamplerBase *sampler);
 
 	const ImageType *exemplarPtr() const;
+	const SamplerBase *sampler() const;
 
 	void weightedMean(ImageType &mean, int width, int height, int nbSamples);
 	void preComputeSamplerRealization(ImageVector<float> &realization, int size);
@@ -65,6 +66,12 @@ template<typename T>
 const typename ProceduralSampling<T>::ImageType *ProceduralSampling<T>::exemplarPtr() const
 {
 	return m_exemplar;
+}
+
+template<typename T>
+const SamplerBase *ProceduralSampling<T>::sampler() const
+{
+	return m_sampler;
 }
 
 template<typename T>

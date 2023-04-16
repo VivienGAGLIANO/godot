@@ -171,6 +171,8 @@ void ProceduralSampling::spatiallyVaryingMeanToAlbedo(Ref<Image> image)
 {
 	ERR_FAIL_COND_MSG(!(m_textureTypeFlag & ALBEDO),
 					  "albedo must be set with set_albedo first.");
+	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() != nullptr,
+					  "the sampler must be activated first (either with computeAutocovarianceSampler or set_cyclostationaryPeriods).");
 	if(!m_exemplar.is_initialized())
 	{
 		computeImageVector();
@@ -189,6 +191,8 @@ void ProceduralSampling::spatiallyVaryingMeanToNormal(Ref<Image> image)
 {
 	ERR_FAIL_COND_MSG(!(m_textureTypeFlag & NORMAL),
 					  "normal must be set with set_normal first.");
+	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() != nullptr,
+					  "the sampler must be activated first (either with computeAutocovarianceSampler or set_cyclostationaryPeriods).");
 	if(!m_exemplar.is_initialized())
 	{
 		computeImageVector();
@@ -212,6 +216,8 @@ void ProceduralSampling::spatiallyVaryingMeanToHeight(Ref<Image> image)
 {
 	ERR_FAIL_COND_MSG(!(m_textureTypeFlag & HEIGHT),
 					  "height must be set with set_height first.");
+	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() != nullptr,
+					  "the sampler must be activated first (either with computeAutocovarianceSampler or set_cyclostationaryPeriods).");
 	if(!m_exemplar.is_initialized())
 	{
 		computeImageVector();
@@ -239,6 +245,8 @@ void ProceduralSampling::spatiallyVaryingMeanToRoughness(Ref<Image> image)
 {
 	ERR_FAIL_COND_MSG(!(m_textureTypeFlag & ROUGHNESS),
 					  "roughness must be set with set_roughness first.");
+	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() != nullptr,
+					  "the sampler must be activated first (either with computeAutocovarianceSampler or set_cyclostationaryPeriods).");
 	if(!m_exemplar.is_initialized())
 	{
 		computeImageVector();
@@ -270,6 +278,8 @@ void ProceduralSampling::spatiallyVaryingMeanToMetallic(Ref<Image> image)
 {
 	ERR_FAIL_COND_MSG(!(m_textureTypeFlag & METALLIC),
 					  "metallic must be set with set_metallic first.");
+	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() != nullptr,
+					  "the sampler must be activated first (either with computeAutocovarianceSampler or set_cyclostationaryPeriods).");
 	if(!m_exemplar.is_initialized())
 	{
 		computeImageVector();
@@ -305,6 +315,8 @@ void ProceduralSampling::spatiallyVaryingMeanToAO(Ref<Image> image)
 {
 	ERR_FAIL_COND_MSG(!(m_textureTypeFlag & AMBIENT_OCCLUSION),
 					  "ambient occlusion must be set with set_ao first.");
+	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() != nullptr,
+					  "the sampler must be activated first (either with computeAutocovarianceSampler or set_cyclostationaryPeriods).");
 	if(!m_exemplar.is_initialized())
 	{
 		computeImageVector();
@@ -369,6 +381,23 @@ void ProceduralSampling::set_meanSize(unsigned int meanSize)
 	m_meanSize = meanSize;
 }
 
+void ProceduralSampling::computeAutocovarianceSampler()
+{
+	TexSyn::ImageVector<float> imagePCA;
+	if(!m_exemplar.is_initialized())
+		computeImageVector();
+	TexSyn::PCA<float> pca(m_exemplar);
+	pca.computePCA(1);
+	imagePCA.init(m_exemplar.get_width(), m_exemplar.get_height(), 1);
+	pca.project(imagePCA);
+	TexSyn::ImageScalar<float> imagePCScalar = imagePCA.get_image(0);
+	TexSyn::StatisticsScalar<float> statistics(imagePCScalar);
+	const TexSyn::ImageScalar<float> &imageAutocovariance = statistics.get_autocovariance(true);
+	TexSyn::SamplerImportance *sampler = memnew(TexSyn::SamplerImportance(imageAutocovariance, 0));
+	m_proceduralSampling.set_sampler(sampler);
+	return;
+}
+
 void ProceduralSampling::samplerRealizationToImage(Ref<Image> image, unsigned int size)
 {
 	ERR_FAIL_COND_MSG(!image->is_empty(), "image must be empty.");
@@ -421,6 +450,7 @@ void ProceduralSampling::_bind_methods()
 	ClassDB::bind_method(D_METHOD("set_meanSize", "size"), &ProceduralSampling::set_meanSize);
 	ClassDB::bind_method(D_METHOD("samplerRealizationToImage", "image", "size"), &ProceduralSampling::samplerRealizationToImage, DEFVAL(4096));
 	ClassDB::bind_method(D_METHOD("centerExemplar", "exemplar", "mean"), &ProceduralSampling::centerExemplar);
+	ClassDB::bind_method(D_METHOD("computeAutocovarianceSampler"), &ProceduralSampling::computeAutocovarianceSampler);
 }
 
 void ProceduralSampling::computeImageVector()

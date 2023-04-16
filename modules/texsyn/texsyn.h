@@ -3,6 +3,7 @@
 
 #include "image_scalar.h"
 #include "image_vector.h"
+#include "texsyn_pca.h"
 #include "texsyn_statistics.h"
 #include "texsyn_procedural_sampling.h"
 
@@ -98,6 +99,8 @@ public:
 	void set_importancePDF(Ref<Image> image);
 	void set_meanAccuracy(unsigned int accuracy);
 	void set_meanSize(unsigned int meanSize);
+
+	void computeAutocovarianceSampler();
 
 	void samplerRealizationToImage(Ref<Image> image, unsigned int size);
 	void centerExemplar(Ref<Image> exemplar, Ref<Image> mean);

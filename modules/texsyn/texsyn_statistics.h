@@ -75,7 +75,7 @@ public:
 	using DataType=T;
 	using VectorType=Vector<DataType>;
 	using ImageScalarType=ImageScalar<DataType>;
-	using ImageScalarRef=Ref<ImageScalar<DataType>>;
+	using ImageScalarRef=const ImageScalar<DataType>&;
 
 	StatisticsScalar(const ImageScalarType &imRef);
 
@@ -83,8 +83,7 @@ public:
 	DataType get_variance();
 	DataType get_specificFirstMoment(int order, bool centering=true, bool reduction=false);
 
-	ImageScalarRef get_autocovariance();
-	ImageScalarRef get_autocorrelation();
+	ImageScalarRef get_autocovariance(bool autocorrelation = false);
 	ImageScalarRef get_fourierMagnitude();
 	ImageScalarRef get_fourierPhase();
 
@@ -93,7 +92,7 @@ public:
 private:
 	void computeFourierTransform();
 
-	Ref<ImageScalarType> m_imRef;
+	ImageScalarRef m_imRef;
 
 	DataType m_mean;
 	bool m_meanComputed;
@@ -124,11 +123,11 @@ typename StatisticsScalar<T>::DataType StatisticsScalar<T>::get_mean()
 	if(!m_meanComputed)
 	{
 		double mean = 0.;
-		m_imRef->for_all_pixels([&] (const DataType &pix)
+		m_imRef.for_all_pixels([&] (const DataType &pix)
 		{
 			mean += pix;
 		});
-		mean /= m_imRef->get_width()*m_imRef->get_height();
+		mean /= m_imRef.get_width()*m_imRef.get_height();
 		m_mean = DataType(mean);
 	}
 	m_meanComputed = true;
@@ -142,11 +141,11 @@ typename StatisticsScalar<T>::DataType StatisticsScalar<T>::get_variance()
 	{
 		double variance = 0.;
 		DataType mean = get_mean();
-		m_imRef->for_all_pixels([&] (const DataType &pix)
+		m_imRef.for_all_pixels([&] (const DataType &pix)
 		{
 			variance += (pix-mean) * (pix-mean);
 		});
-		variance /= m_imRef->get_width()*m_imRef->get_height();
+		variance /= m_imRef.get_width()*m_imRef.get_height();
 		m_variance = DataType(variance);
 	}
 	return m_variance;
@@ -157,33 +156,44 @@ typename StatisticsScalar<T>::DataType StatisticsScalar<T>::get_specificFirstMom
 {
 	DataType mean = get_mean();
 	double moment = 0.;
-	m_imRef->for_all_pixels([&] (const DataType &pix)
+	m_imRef.for_all_pixels([&] (const DataType &pix)
 	{
 		moment += centering ? pow(pix-mean, double(order)) : pow(pix, double(order));
 	});
-	moment /= m_imRef->get_width()*m_imRef->get_height();
+	moment /= m_imRef.get_width()*m_imRef.get_height();
 	if(reduction)
 		moment /= get_variance();
 	return DataType(moment);
 }
 
 template<typename T>
-typename StatisticsScalar<T>::ImageScalarRef StatisticsScalar<T>::get_autocovariance()
+typename StatisticsScalar<T>::ImageScalarRef StatisticsScalar<T>::get_autocovariance(bool autocorrelation)
 {
 	if(!m_autocovariance.is_initialized())
 	{
-		m_autocovariance.init(m_imRef->get_width(), m_imRef->get_height(), true);
-		m_autocovariance.for_all_pixels([&] (const DataType &pix)
+		DataType mean = get_mean();
+		m_autocovariance.init(m_imRef.get_width(), m_imRef.get_height(), true);
+		m_autocovariance.for_all_pixels([&] (DataType &cov, int dx, int dy)
 		{
-
+			cov = 0;
+			double ddx, ddy;
+			ddx = double(dx)/(m_autocovariance.get_width()-1);
+			ddy = double(dy)/(m_autocovariance.get_height()-1);
+			m_imRef.for_all_pixels([&] (const DataType &pix, int x, int y)
+			{
+				double xTau = double(x)/(m_imRef.get_width()-1) + ddx;
+				double yTau = double(y)/(m_imRef.get_height()-1) + ddy;
+				cov += (pix - mean)*(m_imRef.get_pixelInterp(xTau, yTau) - mean);
+			});
+			cov /= m_imRef.get_width()*m_imRef.get_height();
+			if(autocorrelation)
+			{
+				DataType variance = get_variance();
+				cov /= variance;
+			}
 		});
 	}
-}
-
-template<typename T>
-typename StatisticsScalar<T>::ImageScalarRef StatisticsScalar<T>::get_autocorrelation()
-{
-
+	return m_autocovariance;
 }
 
 template<typename T>
@@ -237,9 +247,9 @@ void StatisticsScalar<T>::computeFourierTransform()
 {
 	constexpr double pi = 3.14159265358979323846;
 	//v It is possible to compute it on non-square images though
-	DEV_CHECK(m_imRef->get_width() == m_imRef->get_height());
+	DEV_CHECK(m_imRef.get_width() == m_imRef.get_height());
 	ImageScalarType im_real, im_imaginary, im_marginalReal, im_marginalImaginary;
-	unsigned int size = m_imRef->get_width();
+	unsigned int size = m_imRef.get_width();
 	im_real.init(size, size);
 	im_imaginary.init(size, size);
 	m_FourierMagnitude.init(size, size);
@@ -260,7 +270,7 @@ void StatisticsScalar<T>::computeFourierTransform()
 		{
 			for(unsigned int x=0; x<size; ++x)
 			{
-				DataType refPixel = m_imRef->get_pixel(x, y);
+				DataType refPixel = m_imRef.get_pixel(x, y);
 				DataType marginalRePixel = im_marginalReal.get_pixel(u, 0);
 				rePix = marginalRePixel * cos(-2.0*pi*y*v/size) / size;
 				rePix *= refPixel;
