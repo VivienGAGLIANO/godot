@@ -101,8 +101,8 @@ public:
 	void set_meanSize(unsigned int meanSize);
 
 	void computeAutocovarianceSampler();
-
 	void samplerRealizationToImage(Ref<Image> image, unsigned int size);
+
 	void centerExemplar(Ref<Image> exemplar, Ref<Image> mean);
 
 protected:
