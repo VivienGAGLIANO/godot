@@ -171,7 +171,7 @@ void ProceduralSampling::spatiallyVaryingMeanToAlbedo(Ref<Image> image)
 {
 	ERR_FAIL_COND_MSG(!(m_textureTypeFlag & ALBEDO),
 					  "albedo must be set with set_albedo first.");
-	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() != nullptr,
+	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() == nullptr,
 					  "the sampler must be activated first (either with computeAutocovarianceSampler or set_cyclostationaryPeriods).");
 	if(!m_exemplar.is_initialized())
 	{
@@ -191,7 +191,7 @@ void ProceduralSampling::spatiallyVaryingMeanToNormal(Ref<Image> image)
 {
 	ERR_FAIL_COND_MSG(!(m_textureTypeFlag & NORMAL),
 					  "normal must be set with set_normal first.");
-	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() != nullptr,
+	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() == nullptr,
 					  "the sampler must be activated first (either with computeAutocovarianceSampler or set_cyclostationaryPeriods).");
 	if(!m_exemplar.is_initialized())
 	{
@@ -216,7 +216,7 @@ void ProceduralSampling::spatiallyVaryingMeanToHeight(Ref<Image> image)
 {
 	ERR_FAIL_COND_MSG(!(m_textureTypeFlag & HEIGHT),
 					  "height must be set with set_height first.");
-	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() != nullptr,
+	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() == nullptr,
 					  "the sampler must be activated first (either with computeAutocovarianceSampler or set_cyclostationaryPeriods).");
 	if(!m_exemplar.is_initialized())
 	{
@@ -245,7 +245,7 @@ void ProceduralSampling::spatiallyVaryingMeanToRoughness(Ref<Image> image)
 {
 	ERR_FAIL_COND_MSG(!(m_textureTypeFlag & ROUGHNESS),
 					  "roughness must be set with set_roughness first.");
-	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() != nullptr,
+	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() == nullptr,
 					  "the sampler must be activated first (either with computeAutocovarianceSampler or set_cyclostationaryPeriods).");
 	if(!m_exemplar.is_initialized())
 	{
@@ -278,7 +278,7 @@ void ProceduralSampling::spatiallyVaryingMeanToMetallic(Ref<Image> image)
 {
 	ERR_FAIL_COND_MSG(!(m_textureTypeFlag & METALLIC),
 					  "metallic must be set with set_metallic first.");
-	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() != nullptr,
+	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() == nullptr,
 					  "the sampler must be activated first (either with computeAutocovarianceSampler or set_cyclostationaryPeriods).");
 	if(!m_exemplar.is_initialized())
 	{
@@ -315,7 +315,7 @@ void ProceduralSampling::spatiallyVaryingMeanToAO(Ref<Image> image)
 {
 	ERR_FAIL_COND_MSG(!(m_textureTypeFlag & AMBIENT_OCCLUSION),
 					  "ambient occlusion must be set with set_ao first.");
-	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() != nullptr,
+	ERR_FAIL_COND_MSG(m_proceduralSampling.sampler() == nullptr,
 					  "the sampler must be activated first (either with computeAutocovarianceSampler or set_cyclostationaryPeriods).");
 	if(!m_exemplar.is_initialized())
 	{
@@ -395,6 +395,18 @@ void ProceduralSampling::computeAutocovarianceSampler()
 	const TexSyn::ImageScalar<float> &imageAutocovariance = statistics.get_autocovariance(true);
 	TexSyn::SamplerImportance *sampler = memnew(TexSyn::SamplerImportance(imageAutocovariance, 0));
 	m_proceduralSampling.set_sampler(sampler);
+	return;
+}
+
+void ProceduralSampling::samplerPdfToImage(Ref<Image> image)
+{
+	ERR_FAIL_COND_MSG(!image->is_empty(), "image must be empty.");
+	const TexSyn::SamplerImportance *si = dynamic_cast<const TexSyn::SamplerImportance *>(m_proceduralSampling.sampler());
+	ERR_FAIL_COND_MSG(si == nullptr, "importance sampler must be set with computeAutocovarianceSampler().");
+	Ref<Image> refPdf;
+	refPdf = Image::create_empty(image->get_width(), image->get_height(), false, Image::FORMAT_RF);
+	si->importanceFunction().toImage(refPdf, 0);
+	image->copy_from(refPdf);
 	return;
 }
 

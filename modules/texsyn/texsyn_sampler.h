@@ -109,8 +109,7 @@ public:
 	void generate(VectorType &vector, unsigned int nbPoints);
 	Vec2 next();
 
-	template<typename ImageType>
-	ImageType weightedMean(const ImageType& exemplar, int width, int height, int nbSamples);
+	const ImageScalarType &importanceFunction() const;
 
 private:
 

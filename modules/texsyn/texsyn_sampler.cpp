@@ -117,6 +117,10 @@ SamplerImportance::Vec2 SamplerImportance::next()
 	return m_distribution2D.sampleContinuous(base, &pdf);
 }
 
+const SamplerImportance::ImageScalarType &SamplerImportance::importanceFunction() const
+{
+	return m_importanceFunction;
+}
 
 SamplerImportance::Distribution1D::Distribution1D(const float *f, int n)
 	: m_func(f, f + n), m_cdf(n + 1)

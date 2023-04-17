@@ -47,7 +47,8 @@ ProceduralSampling<T>::ProceduralSampling() :
 template<typename T>
 ProceduralSampling<T>::~ProceduralSampling()
 {
-	memdelete(m_sampler);
+	if(m_sampler != nullptr)
+		memdelete(m_sampler);
 }
 
 template<typename T>

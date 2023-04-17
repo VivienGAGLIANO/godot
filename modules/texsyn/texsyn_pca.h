@@ -2,6 +2,7 @@
 #define TEXSYN_PCA_H
 
 #include "texsyn_statistics.h"
+#include "image_eigen.h"
 #include "eigen/Eigen/Dense"
 
 namespace TexSyn
@@ -22,9 +23,6 @@ public :
 	void computePCA(unsigned int nbComponents = 0);
 	void project(ImageType &res);
 	void back_project(const ImageType &input, ImageType& output) const;
-
-	static void fromImageToMatrix(const ImageType &image, MatrixType &matrix);
-	static void fromMatrixToImage(const MatrixType &matrix, ImageType &image);
 
 private:
 
@@ -49,7 +47,7 @@ PCA<T>::PCA(const ImageType &input) :
 {
 	//bug here
 	m_matrix.resize(input.get_width() * input.get_height(), input.get_nbDimensions());
-	fromImageToMatrix(input, m_matrix);
+	fromImageVectorToMatrix(input, m_matrix);
 	computeEigenVectors();
 }
 
@@ -90,7 +88,7 @@ void PCA<T>::computePCA(unsigned int nbComponents)
 template<typename T>
 void PCA<T>::project(ImageType &res)
 {
-	fromMatrixToImage(m_projection, res);
+	fromMatrixToImageVector(m_projection, res);
 }
 
 template<typename T>
@@ -101,41 +99,7 @@ void PCA<T>::back_project(const ImageType &input, ImageType &output) const
 
 	// Project the matrix back onto the original space
 	MatrixType matrix_inv = matrix * projection.transpose() + m_mean.transpose();
-	fromMatrixToImage(matrix_inv, output);
-}
-
-template<typename T>
-void PCA<T>::fromImageToMatrix(const ImageType &image, MatrixType &matrix)
-{
-	//Assuming image has the correct dimensions
-	int i=0;
-	image.for_all_images([&] (const ImageScalarType &scalar)
-	{
-		int j=0;
-		scalar.for_all_pixels([&] (const DataType& pix)
-		{
-			matrix(j, i) = pix;
-			++j;
-		});
-		++i;
-	});
-}
-
-template<typename T>
-void PCA<T>::fromMatrixToImage(const MatrixType &matrix, ImageType &image)
-{
-	//Assuming image has the correct dimensions
-	int i=0;
-	image.for_all_images([&] (ImageScalarType &scalar)
-	{
-		int j=0;
-		scalar.for_all_pixels([&] (DataType& pix)
-		{
-			pix = matrix(j, i);
-			++j;
-		});
-		++i;
-	});
+	fromMatrixToImageVector(matrix_inv, output);
 }
 
 }
