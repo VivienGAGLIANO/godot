@@ -67,7 +67,6 @@ public:
 
 	void fromImage(Ref<Image> image);
 	void toImage(Ref<Image> image, unsigned int channel) const;
-	void toImageOld(Ref<Image> image, unsigned int channel=0) const;
 
 	const VectorType &get_vector() const;
 	VectorType &get_vector();
@@ -426,69 +425,6 @@ void ImageScalar<T>::toImage(Ref<Image> image, unsigned int channel) const
 		c[channel] = DataType(pix);
 		image->set_pixel(x, y, c);
 	});
-}
-
-template<typename T>
-void ImageScalar<T>::toImageOld(Ref<Image> image, unsigned int channel) const
-{
-	TEXSYN_ASSERT_INITIALIZED();
-	Vector<uint8_t> vector = image->get_data();
-	uint8_t *ptr = vector.ptrw();
-	Image::Format format = image.ptr()->get_format();
-	unsigned int ofs = 0;
-	for(ConstIterator cit = begin(); cit != end(); ++cit, ++ofs)
-	{
-		switch (format) {
-			case Image::FORMAT_L8: {
-				ptr[ofs] = uint8_t(CLAMP(*cit * 255.0, 0, uint8_t(255)));
-			} break;
-			case Image::FORMAT_LA8: {
-				ptr[ofs * 2 + channel] = uint8_t(CLAMP(*cit * 255.0, 0, uint8_t(255)));
-			} break;
-			case Image::FORMAT_R8: {
-				ptr[ofs] = uint8_t(CLAMP(*cit * 255.0, 0, uint8_t(255)));
-			} break;
-			case Image::FORMAT_RG8: {
-				ptr[ofs * 2 + channel] = uint8_t(CLAMP(*cit * 255.0, 0, uint8_t(255)));
-			} break;
-			case Image::FORMAT_RGB8: {
-				ptr[ofs * 3 + channel] = uint8_t(CLAMP(*cit * 255.0, 0, uint8_t(255)));
-			} break;
-			case Image::FORMAT_RGBA8: {
-				ptr[ofs * 4 + channel] = uint8_t(CLAMP(*cit * 255.0, 0, uint8_t(255)));
-
-			} break;
-			case Image::FORMAT_RF: {
-				((float *)ptr)[ofs] = float(*cit);
-			} break;
-			case Image::FORMAT_RGF: {
-				((float *)ptr)[ofs * 2 + channel] = float(*cit);
-			} break;
-			case Image::FORMAT_RGBF: {
-				((float *)ptr)[ofs * 3 + channel] = float(*cit);
-			} break;
-			case Image::FORMAT_RGBAF: {
-				((float *)ptr)[ofs * 4 + channel] = float(*cit);
-			} break;
-			case Image::FORMAT_RH: {
-				((uint16_t *)ptr)[ofs] = Math::make_half_float(float(*cit));
-			} break;
-			case Image::FORMAT_RGH: {
-				((uint16_t *)ptr)[ofs * 2 + channel] = Math::make_half_float(float(*cit));
-			} break;
-			case Image::FORMAT_RGBH: {
-				((uint16_t *)ptr)[ofs * 3 + channel] = Math::make_half_float(float(*cit));
-			} break;
-			case Image::FORMAT_RGBAH: {
-				((uint16_t *)ptr)[ofs * 4 + channel] = Math::make_half_float(float(*cit));
-			} break;
-			default:
-			{
-				//Format not supported
-			}
-		}
-	}
-	image->set_data(image->get_width(), image->get_height(), image->has_mipmaps(), format, vector);
 }
 
 template<typename T>
