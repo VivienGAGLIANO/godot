@@ -463,6 +463,7 @@ void ProceduralSampling::_bind_methods()
 	ClassDB::bind_method(D_METHOD("samplerRealizationToImage", "image", "size"), &ProceduralSampling::samplerRealizationToImage, DEFVAL(4096));
 	ClassDB::bind_method(D_METHOD("centerExemplar", "exemplar", "mean"), &ProceduralSampling::centerExemplar);
 	ClassDB::bind_method(D_METHOD("computeAutocovarianceSampler"), &ProceduralSampling::computeAutocovarianceSampler);
+	ClassDB::bind_method(D_METHOD("samplerPdfToImage", "image"), &ProceduralSampling::samplerPdfToImage);
 }
 
 void ProceduralSampling::computeImageVector()
