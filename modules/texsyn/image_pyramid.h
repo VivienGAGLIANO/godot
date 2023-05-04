@@ -157,19 +157,26 @@ typename ImagePyramid<T, element>::ImageVectorType ImagePyramid<T, element>::exp
 		for (unsigned int y=0; y<image.get_height(); ++y)
 			for (unsigned int d=0; d<i.get_nbDimensions(); ++d)
 			{
-				i.set_pixel(2*x+1, 2*y+1, d, image.get_pixel(x, y, d));
+                auto pix = image.get_pixel(x,y,d);
+                i.set_pixel(2*x, 2*y, d, pix);
+                i.set_pixel(2*x+1, 2*y, d, pix);
+                i.set_pixel(2*x, 2*y+1, d, pix);
+                i.set_pixel(2*x+1, 2*y+1, d, pix);
 			}
 
-	ImageScalar<DataType> kernel;
-	kernel.init(5, 5, false);
-	std::vector<DataType> v = {1, 4, 6, 4, 1};
-	auto func = [v](DataType &pix, int i, int j)
-	{
-		pix = v[i]*v[j]/64.;
-	};
-	kernel.parallel_for_all_pixels(func);
+//  This is a partial fix to the bleeding edge problem. Not using the smoothing kernel, and using GL_NEAREST sampling, allows for a good (yet aliased) reconstruction. This will do for now.
+//  Full solution would imply working on better texture packing and how to filter packed textures.
 
-	i ^= kernel;
+//	ImageScalar<DataType> kernel;
+//	kernel.init(5, 5, false);
+//	std::vector<DataType> v = {1, 4, 6, 4, 1};
+//	auto func = [v](DataType &pix, int i, int j)
+//	{
+//		pix = v[i]*v[j]/static_cast<T>(64);
+//	};
+//	kernel.parallel_for_all_pixels(func);
+//
+//	i ^= kernel;
 
 	return i;
 }
@@ -186,7 +193,7 @@ typename ImagePyramid<T, element>::ImageVectorType ImagePyramid<T, element>::red
 	std::vector<DataType> v = {1, 4, 6, 4, 1};
 	auto func = [v](DataType &pix, int i, int j)
 	{
-		pix = v[i]*v[j]/256.;
+		pix = v[i]*v[j]/static_cast<T>(256);
 	};
 	kernel.parallel_for_all_pixels(func);
 
@@ -298,7 +305,6 @@ template <typename T>
 LaplacianPyramid<T>::LaplacianPyramid(const GaussianPyramid<DataType> &pyramid) :
 	ImagePyramid<T, ImageVector<T>>(pyramid.get_depth())
 {
-	print_line("Derived copy constructor.");
 	init(pyramid);
 }
 
@@ -598,12 +604,10 @@ typename RieszPyramid<T>::ImageVectorType RieszPyramid<T>::phase_congruency(int 
 
         for (int j = i; j != alpha; --j) // TODO using expand for practical reasons, but this operation applies gaussian blur, we probably shouldn't use it
         {
-            std::cout << "expanding layer " << j << "    " << std::flush;
             fe = this->expand(fe);
             r1 = this->expand(r1);
             r2 = this->expand(r2);
         }
-        std::cout << std::endl;
 
         // E_n(x)
         F += fe;
@@ -665,16 +669,16 @@ typename RieszPyramid<T>::ImageVectorType RieszPyramid<T>::phase_congruency(int 
 
     E *= s;
 
-    DataType mn = static_cast<DataType>(FLT_MAX),
-             mx = static_cast<DataType>(-FLT_MAX);
-    E.for_all_images
-    (
-        [&](ImageScalar<T> &image)
-        {
-            image.for_all_pixels([&](const T &pix) { mn = std::min(mn, pix); mx = std::max(mx, pix); });
-        }
-    );
-    std::cout << "Min " << mn << "  Max " << mx << std::endl;
+//    DataType mn = static_cast<DataType>(FLT_MAX),
+//             mx = static_cast<DataType>(-FLT_MAX);
+//    E.for_all_images
+//    (
+//        [&](ImageScalar<T> &image)
+//        {
+//            image.for_all_pixels([&](const T &pix) { mn = std::min(mn, pix); mx = std::max(mx, pix); });
+//        }
+//    );
+//    std::cout << "Min " << mn << "  Max " << mx << std::endl;
 
     return E;
 }
@@ -766,9 +770,7 @@ Ref<Image> GaussianPyr::get_layer(unsigned int depth) const
 	TEXSYN_ASSERT_DEPTH(depth);
 
 	auto layer = pyr.get_layer(depth);
-	Ref<Image> img;
-	img.instantiate();
-	img->create_empty(layer.get_width(), layer.get_height(), false, Image::FORMAT_RGBF);
+	Ref<Image> img = Image::create_empty(layer.get_width(), layer.get_height(), true, Image::FORMAT_RGBF);
 
 	layer.toImage(img);
 
@@ -826,9 +828,7 @@ Ref<Image> LaplacianPyr::get_layer(unsigned int depth) const
 	TEXSYN_ASSERT_DEPTH(depth);
 
 	auto layer = pyr.get_layer(depth);
-	Ref<Image> img;
-	img.instantiate();
-	img->create_empty(layer.get_width(), layer.get_height(), false, Image::FORMAT_RGBF);
+	Ref<Image> img = Image::create_empty(layer.get_width(), layer.get_height(), true, Image::FORMAT_RGBF);
 
 	layer.toImage(img);
 
@@ -895,19 +895,16 @@ Dictionary RieszPyr::get_layer(unsigned int depth, CoordType type)
 	RieszLayer<double> layer = pyr.get_layer(depth);
 	int width = layer.fe.get_width(),
 		height = layer.fe.get_height();
-	Ref<Image> fe, r1, r2, amp, pha, ori;
 	Dictionary dict;
 
 
 	switch (type)
 	{
 		case CoordType::CARTESIAN:
-			fe.instantiate();
-			r1.instantiate();
-			r2.instantiate();
-			fe->create_empty(width, height, false, Image::FORMAT_RGB8);
-			r1->create_empty(width, height, false, Image::FORMAT_RGB8);
-			r2->create_empty(width, height, false, Image::FORMAT_RGB8);
+		{
+			Ref<Image> fe = Image::create_empty(width, height, true, Image::FORMAT_RGBF);
+			Ref<Image> r1 = Image::create_empty(width, height, true, Image::FORMAT_RGBF);
+			Ref<Image> r2 = Image::create_empty(width, height, true, Image::FORMAT_RGBF);
 			layer.fe.toImage(fe);
 			layer.r1.toImage(r1);
 			layer.r2.toImage(r2);
@@ -918,14 +915,13 @@ Dictionary RieszPyr::get_layer(unsigned int depth, CoordType type)
 			dict["r1"] = r1;
 			dict["r2"] = r2;
 			break;
+		}
 
 		case CoordType::POLAR:
-			amp.instantiate();
-			pha.instantiate();
-			ori.instantiate();
-			amp->create_empty(width, height, false, Image::FORMAT_RGB8);
-			pha->create_empty(width, height, false, Image::FORMAT_RGB8);
-			ori->create_empty(width, height, false, Image::FORMAT_RGB8);
+		{
+			Ref<Image> amp = Image::create_empty(width, height, true, Image::FORMAT_RGBF);
+			Ref<Image> pha = Image::create_empty(width, height, true, Image::FORMAT_RGBF);
+			Ref<Image> ori = Image::create_empty(width, height, true, Image::FORMAT_RGBF);
 			layer.amp.toImage(amp);
 			layer.pha.toImage(pha);
 			layer.ori.toImage(ori);
@@ -936,6 +932,7 @@ Dictionary RieszPyr::get_layer(unsigned int depth, CoordType type)
 			dict["pha"] = pha;
 			dict["ori"] = ori;
 			break;
+		}
 
 		default:
 			print_line("Unrecognized type, unable to fetch layer.");
@@ -948,7 +945,6 @@ Dictionary RieszPyr::get_layer(unsigned int depth, CoordType type)
 
 Dictionary RieszPyr::pack_in_texture(CoordType type) const
 {
-    Ref<Image> fe, r1, r2, amp, pha, ori;
     Dictionary dict;
 
     std::vector<ImageVector<double>> packed_textures;
@@ -957,14 +953,12 @@ Dictionary RieszPyr::pack_in_texture(CoordType type) const
     switch (type)
     {
         case CoordType::CARTESIAN:
+		{
             packed_textures = pyr.pack_in_texture(RieszPyramid<double>::CoordType::CARTESIAN);
             width = packed_textures[0].get_width();
-			fe.instantiate();
-			r1.instantiate();
-			r2.instantiate();
-			fe->create_empty(width, height, false, Image::FORMAT_RGB8);
-			r1->create_empty(width, height, false, Image::FORMAT_RGB8);
-			r2->create_empty(width, height, false, Image::FORMAT_RGB8);
+			Ref<Image> fe = Image::create_empty(width, height, true, Image::FORMAT_RGBF);
+			Ref<Image> r1 = Image::create_empty(width, height, true, Image::FORMAT_RGBF);
+			Ref<Image> r2 = Image::create_empty(width, height, true, Image::FORMAT_RGBF);
             packed_textures[0].toImage(fe);
             packed_textures[1].toImage(r1);
             packed_textures[2].toImage(r2);
@@ -975,16 +969,15 @@ Dictionary RieszPyr::pack_in_texture(CoordType type) const
             dict["r1"] = r1;
             dict["r2"] = r2;
             break;
+		}
 
         case CoordType::POLAR:
+		{
             packed_textures = pyr.pack_in_texture(RieszPyramid<double>::CoordType::POLAR);
             width = packed_textures[0].get_width();
-			amp.instantiate();
-			pha.instantiate();
-			ori.instantiate();
-			amp->create_empty(width, height, false, Image::FORMAT_RGB8);
-			pha->create_empty(width, height, false, Image::FORMAT_RGB8);
-			ori->create_empty(width, height, false, Image::FORMAT_RGB8);
+			Ref<Image> amp = Image::create_empty(width, height, true, Image::FORMAT_RGBF);
+			Ref<Image> pha = Image::create_empty(width, height, true, Image::FORMAT_RGBF);
+			Ref<Image> ori = Image::create_empty(width, height, true, Image::FORMAT_RGBF);
             packed_textures[0].toImage(amp);
             packed_textures[1].toImage(pha);
             packed_textures[2].toImage(ori);
@@ -995,6 +988,7 @@ Dictionary RieszPyr::pack_in_texture(CoordType type) const
             dict["pha"] = pha;
             dict["ori"] = ori;
             break;
+		}
 
         default:
             print_line("Unrecognized type, unable to fetch layer.");
@@ -1006,9 +1000,7 @@ Dictionary RieszPyr::pack_in_texture(CoordType type) const
 
 Ref<Image> RieszPyr::phase_congruency(unsigned int alpha, unsigned int beta, TexSyn::RieszPyr::CoordType type)
 {
-    Ref<Image> pc;
-	pc.instantiate();
-	pc->create_empty(pyr.get_layer(alpha).fe.get_width(), pyr.get_layer(alpha).fe.get_height(), false, Image::FORMAT_L8);
+    Ref<Image> pc = Image::create_empty(pyr.get_layer(alpha).fe.get_width(), pyr.get_layer(alpha).fe.get_height(), true, Image::FORMAT_RF);
 
     std::string system;
     switch (type)
@@ -1031,9 +1023,7 @@ Ref<Image> RieszPyr::phase_congruency(unsigned int alpha, unsigned int beta, Tex
 
 Ref<Image> RieszPyr::reconstruct() const
 {
-    Ref<Image> rec;
-	rec.instantiate();
-	rec->create_empty(pyr.get_layer(0).fe.get_width(), pyr.get_layer(0).fe.get_height(), false, Image::FORMAT_RGB8);
+    Ref<Image> rec = Image::create_empty(pyr.get_layer(0).fe.get_width(), pyr.get_layer(0).fe.get_height(), true, Image::FORMAT_RGBF);
 
     pyr.reconstruct().toImage(rec);
 
@@ -1049,9 +1039,7 @@ Ref<Image> RieszPyr::test(const Ref<Image> &image, const Ref<Image> &subImage) c
 
 	img.set_rect(subImg, 50, 50);
 
-    Ref<Image> output;
-	output.instantiate();
-	output->create_empty(image->get_width(), image->get_height(), false, Image::FORMAT_RGB8);
+    Ref<Image> output = Image::create_empty(image->get_width(), image->get_height(), true, Image::FORMAT_RGBF);
     img.toImage(output);
 
     return output;

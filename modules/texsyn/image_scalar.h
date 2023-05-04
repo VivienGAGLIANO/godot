@@ -847,7 +847,7 @@ ImageScalar<T> ImageScalar<T>::operator^(const ImageScalar<T> &kernel) const
 				clamped = x_pix+x >= 0 && y_pix+y >= 0 && x_pix+x < x_max && y_pix+y < y_max ?
                       get_pixel(x_pix + x, y_pix + y) :
                       static_cast<DataType>(0);
-                n_pix += kernel.get_pixel(x, y) * clamped;
+                n_pix += kernel.get_pixel(x+k_range, y+k_range) * clamped;
             }
 
             pix = n_pix;

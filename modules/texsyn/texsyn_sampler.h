@@ -171,6 +171,18 @@ int SamplerImportance::findInterval(int size, const Predicate &pred)
 	return CLAMP(first - 1, 0, size - 2);
 }
 
+
+
+class SamplerPCPreserving : public SamplerBase
+{
+public:
+    SamplerPCPreserving();
+
+
+private:
+
+};
+
 } //namespace Stamping
 
 #endif //__SAMPLER__H__

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 EnsureSConsVersion(3, 0, 0)
 EnsurePythonVersion(3, 6)
