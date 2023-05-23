@@ -33,6 +33,8 @@
 namespace TexSyn
 {
 
+static unsigned int getNbDimensionsFromFormat(Image::Format format);
+
 template<typename T>
 class ImageScalar
 {
@@ -387,7 +389,7 @@ void ImageScalar<T>::set_rect(const ImageScalar<T> &subImage, int x, int y)
 
         for (; it != it_end; it+=static_cast<typename Iterator::difference_type>(get_width() - subImage.get_width()))
             for (const Iterator it_line_end = it+subImage.get_width(); it != it_line_end; ++it, ++r_it)
-                *it = *r_it;
+                *it = static_cast<DataType>(*r_it);
     };
 
     int block_start = 0;
@@ -408,10 +410,11 @@ void ImageScalar<T>::fromImage(Ref<Image> image)
 {
 	init(image->get_width(), image->get_height());
 	ERR_FAIL_COND_MSG(image.ptr() == nullptr, "image must not be null, and must be locked for read access.");
+	ERR_FAIL_COND_MSG(getNbDimensionsFromFormat(image->get_format()) != 1, "image must have only one channel.");
 	for_all_pixels([&] (DataType &pix, int x, int y)
 	{
 		Color c = image->get_pixel(x, y);
-		pix = DataType(c.get_luminance());
+		pix = DataType(c.r);
 	});
 }
 
@@ -956,6 +959,63 @@ ImageScalar<T> ImageScalar<T>::operator/(const DataType &s) const
 		*it = (*localIt) / s;
 	}
 	return output;
+}
+
+static unsigned int getNbDimensionsFromFormat(Image::Format format)
+{
+	unsigned int nbDimensions;
+	switch (format)
+	{
+		case Image::FORMAT_L8: {
+			nbDimensions = 1;
+		} break;
+		case Image::FORMAT_LA8: {
+			nbDimensions = 2;
+		} break;
+		case Image::FORMAT_R8: {
+			nbDimensions = 1;
+		} break;
+		case Image::FORMAT_RG8: {
+			nbDimensions = 2;
+		} break;
+		case Image::FORMAT_RGB8: {
+			nbDimensions = 3;
+		} break;
+		case Image::FORMAT_RGBA8: {
+			nbDimensions = 4;
+
+		} break;
+		case Image::FORMAT_RF: {
+			nbDimensions = 1;
+		} break;
+		case Image::FORMAT_RGF: {
+			nbDimensions = 2;
+		} break;
+		case Image::FORMAT_RGBF: {
+			nbDimensions = 3;
+		} break;
+		case Image::FORMAT_RGBAF: {
+			nbDimensions = 4;
+		} break;
+		case Image::FORMAT_RH: {
+			nbDimensions = 1;
+		} break;
+		case Image::FORMAT_RGH: {
+			nbDimensions = 2;
+		} break;
+		case Image::FORMAT_RGBH: {
+			nbDimensions = 3;
+		} break;
+		case Image::FORMAT_RGBAH: {
+			nbDimensions = 4;
+		} break;
+		default:
+		{
+			nbDimensions=0;
+			//Format not supported
+		}
+	}
+	return nbDimensions;
 }
 
 }

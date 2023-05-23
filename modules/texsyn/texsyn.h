@@ -107,7 +107,7 @@ public:
 
 	void centerExemplar(Ref<Image> exemplar, Ref<Image> mean);
 
-	Array quantizeTexture(Ref<Image> image, uint8_t nLayers = 10) const;
+	Array quantizeTexture(Ref<Image> image, Array extremum, uint8_t nLayers = 10) const;
 
 protected:
 	static void _bind_methods();

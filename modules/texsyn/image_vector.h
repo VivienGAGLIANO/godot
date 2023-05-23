@@ -22,8 +22,6 @@
 namespace TexSyn
 {
 
-static unsigned int getNbDimensionsFromFormat(Image::Format format);
-
 template<typename T>
 class ImageVector
 {
@@ -988,63 +986,6 @@ void ImageVector<T>::parallel_for_all_images(	const std::function<void (SubImage
 	{
 		threads[i].join();
 	}
-}
-
-static unsigned int getNbDimensionsFromFormat(Image::Format format)
-{
-	unsigned int nbDimensions;
-	switch (format)
-	{
-		case Image::FORMAT_L8: {
-			nbDimensions = 1;
-		} break;
-		case Image::FORMAT_LA8: {
-			nbDimensions = 2;
-		} break;
-		case Image::FORMAT_R8: {
-			nbDimensions = 1;
-		} break;
-		case Image::FORMAT_RG8: {
-			nbDimensions = 2;
-		} break;
-		case Image::FORMAT_RGB8: {
-			nbDimensions = 3;
-		} break;
-		case Image::FORMAT_RGBA8: {
-			nbDimensions = 4;
-
-		} break;
-		case Image::FORMAT_RF: {
-			nbDimensions = 1;
-		} break;
-		case Image::FORMAT_RGF: {
-			nbDimensions = 2;
-		} break;
-		case Image::FORMAT_RGBF: {
-			nbDimensions = 3;
-		} break;
-		case Image::FORMAT_RGBAF: {
-			nbDimensions = 4;
-		} break;
-		case Image::FORMAT_RH: {
-			nbDimensions = 1;
-		} break;
-		case Image::FORMAT_RGH: {
-			nbDimensions = 2;
-		} break;
-		case Image::FORMAT_RGBH: {
-			nbDimensions = 3;
-		} break;
-		case Image::FORMAT_RGBAH: {
-			nbDimensions = 4;
-		} break;
-		default:
-		{
-			nbDimensions=0;
-			//Format not supported
-		}
-	}
-	return nbDimensions;
 }
 
 }

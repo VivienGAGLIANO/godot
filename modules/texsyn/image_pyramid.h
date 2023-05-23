@@ -1017,6 +1017,7 @@ Ref<Image> RieszPyr::phase_congruency(unsigned int alpha, unsigned int beta, Tex
     };
 
     pyr.phase_congruency(alpha, beta, system).toImage(pc);
+	pc->generate_mipmaps();
 
     return pc;
 }
@@ -1026,6 +1027,7 @@ Ref<Image> RieszPyr::reconstruct() const
     Ref<Image> rec = Image::create_empty(pyr.get_layer(0).fe.get_width(), pyr.get_layer(0).fe.get_height(), true, Image::FORMAT_RGBF);
 
     pyr.reconstruct().toImage(rec);
+	rec->generate_mipmaps();
 
     return rec;
 }

@@ -440,7 +440,7 @@ void ProceduralSampling::centerExemplar(Ref<Image> exemplar, Ref<Image> mean)
 	return;
 }
 
-Array ProceduralSampling::quantizeTexture(Ref<Image> image, uint8_t nLayers) const
+Array ProceduralSampling::quantizeTexture(Ref<Image> image, Array extremum, uint8_t nLayers) const
 {
 	ERR_FAIL_COND_V_MSG(image.is_null(), Array(), "image must not be null.");
 	ERR_FAIL_COND_V_MSG(image->is_empty(), Array(), "image must not be empty.");
@@ -456,6 +456,8 @@ Array ProceduralSampling::quantizeTexture(Ref<Image> image, uint8_t nLayers) con
 				if (pix > mx) mx = pix;
 			});
 
+	std::cout << "Quantized texture: min " << mn << "  max " << mx << std::endl;
+
 	for (size_t i = 0; i < nLayers; ++i)
 	{
 		auto inf = mn + (mx-mn)*i/double(nLayers),
@@ -470,12 +472,17 @@ Array ProceduralSampling::quantizeTexture(Ref<Image> image, uint8_t nLayers) con
 				});
 		std::cout << "Layer " << i << " in the range " << inf << " " << sup << " : pixel count " << c << " (" << (float)c/(image->get_width()*image->get_height())*100. << "%)" << std::endl;
 
-		Ref<Image> layer = Image::create_empty(image->get_width(), image->get_height(), image->has_mipmaps(), image->get_format());
+		Ref<Image> layer = Image::create_empty(image->get_width(), image->get_height(), false, image->get_format());
 		tex.toImage(layer, 0);
 
 		layers.append(layer);
 		//        layers.append(layer.get_ref_ptr());
 	}
+
+	extremum.clear();
+	extremum.append(mn);
+	extremum.append(mx);
+
 
 	return layers;
 }
@@ -505,7 +512,7 @@ void ProceduralSampling::_bind_methods()
 	ClassDB::bind_method(D_METHOD("centerExemplar", "exemplar", "mean"), &ProceduralSampling::centerExemplar);
 	ClassDB::bind_method(D_METHOD("computeAutocovarianceSampler"), &ProceduralSampling::computeAutocovarianceSampler);
 	ClassDB::bind_method(D_METHOD("samplerPdfToImage", "image"), &ProceduralSampling::samplerPdfToImage);
-	ClassDB::bind_method(D_METHOD("quantizeTexture", "image", "nLayers"), &ProceduralSampling::quantizeTexture, DEFVAL(10));
+	ClassDB::bind_method(D_METHOD("quantizeTexture", "image", "extremum", "nLayers"), &ProceduralSampling::quantizeTexture, DEFVAL(10));
 }
 
 void ProceduralSampling::computeImageVector()
