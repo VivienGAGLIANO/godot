@@ -33,7 +33,7 @@
 namespace TexSyn
 {
 
-static unsigned int getNbDimensionsFromFormat(Image::Format format);
+unsigned int getNbDimensionsFromFormat(Image::Format format);
 
 template<typename T>
 class ImageScalar
@@ -408,9 +408,9 @@ void ImageScalar<T>::set_rect(const ImageScalar<T> &subImage, int x, int y)
 template<typename T>
 void ImageScalar<T>::fromImage(Ref<Image> image)
 {
-	init(image->get_width(), image->get_height());
 	ERR_FAIL_COND_MSG(image.ptr() == nullptr, "image must not be null, and must be locked for read access.");
 	ERR_FAIL_COND_MSG(getNbDimensionsFromFormat(image->get_format()) != 1, "image must have only one channel.");
+	init(image->get_width(), image->get_height());
 	for_all_pixels([&] (DataType &pix, int x, int y)
 	{
 		Color c = image->get_pixel(x, y);
@@ -961,7 +961,7 @@ ImageScalar<T> ImageScalar<T>::operator/(const DataType &s) const
 	return output;
 }
 
-static unsigned int getNbDimensionsFromFormat(Image::Format format)
+unsigned int getNbDimensionsFromFormat(Image::Format format)
 {
 	unsigned int nbDimensions;
 	switch (format)
