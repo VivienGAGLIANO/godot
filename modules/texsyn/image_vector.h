@@ -13,10 +13,13 @@
 															&& (other).get_nbDimensions() == get_nbDimensions()\
 															&& (other).get_width() == get_width()\
 															&& (other).get_height() == get_height())
+#define TEXSYN_ASSERT_EXACT_DIMENSIONS(dim)					DEV_ASSERT(is_initialized() && (dim)==get_nbDimensions())
+
 #else
 #define TEXSYN_ASSERT_DIMENSIONS(dim)
 #define TEXSYN_ASSERT_DIMENSIONS_AND_IN_BOUNDS(x, y, dim)
 #define TEXSYN_ASSERT_SAME_DIMENSIONS(other)
+#define TEXSYN_ASSERT_EXACT_DIMENSIONS(dim)
 #endif
 
 namespace TexSyn
@@ -62,6 +65,8 @@ public:
 	void set_pixel(int x, int y, int d, DataType value);
 	void set_pixel(int x, int y, const VectorType &v);
     void set_rect(const ImageVector<T> &rect, int x, int y);
+
+	ImageScalarType rgbToGrayscale() const;
 
 	void fromImage(Ref<Image> image);
 	void toImage(Ref<Image> image) const;
@@ -245,7 +250,7 @@ typename ImageVector<T>::VectorType ImageVector<T>::get_pixel(int x, int y) cons
 	v.resize(get_nbDimensions());
 	for(unsigned int d=0; d<get_nbDimensions(); ++d)
 	{
-		v[d]=get_pixel(x, y, d);
+		v.set(d, get_pixel(x, y, d));
 	}
 	return v;
 }
@@ -336,6 +341,23 @@ void ImageVector<T>::set_rect(const ImageVector<T> &rect, int x, int y)
 	(
 		[&](ImageScalar<T> &img, int d) { img.set_rect(rect.get_image(d), x, y); }
 	);
+}
+
+template <typename T>
+ImageScalar<T> ImageVector<T>::rgbToGrayscale() const
+{
+	TEXSYN_ASSERT_EXACT_DIMENSIONS(3);
+
+	ImageScalarType grayscale_image;
+	grayscale_image.init(get_width(), get_height(), false);
+
+	grayscale_image.parallel_for_all_pixels([this](DataType &pix, int x, int y)
+	{
+		const VectorType c_pix = this->get_pixel(x,y);
+		pix = 0.3*c_pix[0] + 0.59*c_pix[1] + 0.11*c_pix[2]; // luminosity based conversion
+	});
+
+	return grayscale_image;
 }
 
 template<typename T>

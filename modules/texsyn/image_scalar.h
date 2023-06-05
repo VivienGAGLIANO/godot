@@ -33,7 +33,62 @@
 namespace TexSyn
 {
 
-unsigned int getNbDimensionsFromFormat(Image::Format format);
+static unsigned int getNbDimensionsFromFormat(Image::Format format)
+{
+	unsigned int nbDimensions;
+	switch (format)
+	{
+		case Image::FORMAT_L8: {
+			nbDimensions = 1;
+		} break;
+		case Image::FORMAT_LA8: {
+			nbDimensions = 2;
+		} break;
+		case Image::FORMAT_R8: {
+			nbDimensions = 1;
+		} break;
+		case Image::FORMAT_RG8: {
+			nbDimensions = 2;
+		} break;
+		case Image::FORMAT_RGB8: {
+			nbDimensions = 3;
+		} break;
+		case Image::FORMAT_RGBA8: {
+			nbDimensions = 4;
+
+		} break;
+		case Image::FORMAT_RF: {
+			nbDimensions = 1;
+		} break;
+		case Image::FORMAT_RGF: {
+			nbDimensions = 2;
+		} break;
+		case Image::FORMAT_RGBF: {
+			nbDimensions = 3;
+		} break;
+		case Image::FORMAT_RGBAF: {
+			nbDimensions = 4;
+		} break;
+		case Image::FORMAT_RH: {
+			nbDimensions = 1;
+		} break;
+		case Image::FORMAT_RGH: {
+			nbDimensions = 2;
+		} break;
+		case Image::FORMAT_RGBH: {
+			nbDimensions = 3;
+		} break;
+		case Image::FORMAT_RGBAH: {
+			nbDimensions = 4;
+		} break;
+		default:
+		{
+			nbDimensions=0;
+			//Format not supported
+		}
+	}
+	return nbDimensions;
+}
 
 template<typename T>
 class ImageScalar
@@ -960,64 +1015,6 @@ ImageScalar<T> ImageScalar<T>::operator/(const DataType &s) const
 	}
 	return output;
 }
-
-unsigned int getNbDimensionsFromFormat(Image::Format format)
-{
-	unsigned int nbDimensions;
-	switch (format)
-	{
-		case Image::FORMAT_L8: {
-			nbDimensions = 1;
-		} break;
-		case Image::FORMAT_LA8: {
-			nbDimensions = 2;
-		} break;
-		case Image::FORMAT_R8: {
-			nbDimensions = 1;
-		} break;
-		case Image::FORMAT_RG8: {
-			nbDimensions = 2;
-		} break;
-		case Image::FORMAT_RGB8: {
-			nbDimensions = 3;
-		} break;
-		case Image::FORMAT_RGBA8: {
-			nbDimensions = 4;
-
-		} break;
-		case Image::FORMAT_RF: {
-			nbDimensions = 1;
-		} break;
-		case Image::FORMAT_RGF: {
-			nbDimensions = 2;
-		} break;
-		case Image::FORMAT_RGBF: {
-			nbDimensions = 3;
-		} break;
-		case Image::FORMAT_RGBAF: {
-			nbDimensions = 4;
-		} break;
-		case Image::FORMAT_RH: {
-			nbDimensions = 1;
-		} break;
-		case Image::FORMAT_RGH: {
-			nbDimensions = 2;
-		} break;
-		case Image::FORMAT_RGBH: {
-			nbDimensions = 3;
-		} break;
-		case Image::FORMAT_RGBAH: {
-			nbDimensions = 4;
-		} break;
-		default:
-		{
-			nbDimensions=0;
-			//Format not supported
-		}
-	}
-	return nbDimensions;
-}
-
 }
 
 #endif // TEXSYN_IMAGE_SCALAR_H
