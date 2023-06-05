@@ -1,10 +1,7 @@
 #ifndef TEXSYN_H
 #define TEXSYN_H
 
-#include "image_scalar.h"
-#include "image_vector.h"
 #include "texsyn_pca.h"
-#include "texsyn_statistics.h"
 #include "texsyn_procedural_sampling.h"
 
 constexpr std::uint32_t texsyn_log2(std::uint32_t n) noexcept

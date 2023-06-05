@@ -23,7 +23,6 @@ void TexSyn::RieszPyr::_bind_methods()
 	ClassDB::bind_method(D_METHOD("init", "image", "depth"), &RieszPyr::init);
 	ClassDB::bind_method(D_METHOD("get_layer", "depth", "type"), &RieszPyr::get_layer);
     ClassDB::bind_method(D_METHOD("pack_in_texture", "type"), &RieszPyr::pack_in_texture);
-    ClassDB::bind_method(D_METHOD("phases_congruency", "alpha", "beta", "type"), &RieszPyr::phase_congruency);
     ClassDB::bind_method(D_METHOD("reconstruct"), &RieszPyr::reconstruct);
     ClassDB::bind_method(D_METHOD("test", "image", "subImage"), &RieszPyr::test);
 }

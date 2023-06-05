@@ -17,6 +17,8 @@
 #define TEXSYN_ASSERT_RANGE(alpha, beta)		DEV_ASSERT((alpha) <= (beta) && (beta) < this->get_depth())
 
 
+// TODO extract Godot interfaced classes from here and put them in different file (at least out of namespace, and move definition to .cpp file)
+
 namespace TexSyn {
 
 /*****************************************************************************************************/
@@ -49,10 +51,10 @@ public:
 
     ImagePyramid<DataType, PyramidElement> &operator=(const ImagePyramid<DataType, PyramidElement> &other);
 
-protected:
 	static ImageVectorType expand(const ImageVectorType &image);
 	static ImageVectorType reduce(const ImageVectorType &image);
 
+protected:
 	unsigned int m_depth;
 	std::vector<PyramidElement> m_layers;
 };
@@ -328,6 +330,8 @@ void LaplacianPyramid<T>::init(const GaussianPyramid<DataType> &pyramid)
 
 /******************************************* Riesz pyramid *******************************************/
 
+// TODO repplace Riesz pyramid construction method with better Riesz transform (cc Léo)
+
 template <typename T>
 class RieszPyramid;
 
@@ -505,7 +509,6 @@ public:
 	RieszPyramid(const LaplacianPyramid<DataType> &pyramid);
 
     std::vector<ImageVectorType> pack_in_texture(const CoordType &system = CoordType::CARTESIAN) const;
-	ImageVectorType phase_congruency(int alpha, int beta, const std::string &system = "cartesian") const;
     ImageVectorType reconstruct() const;
 
 protected:
@@ -573,114 +576,6 @@ std::vector<typename RieszPyramid<T>::ImageVectorType> RieszPyramid<T>::pack_in_
     }
 
     return packed_textures;
-}
-
-template <typename T>
-typename RieszPyramid<T>::ImageVectorType RieszPyramid<T>::phase_congruency(int alpha, int beta, const std::string &system) const
-{
-	TEXSYN_ASSERT_RANGE(alpha, beta);
-
-    DataType eps = static_cast<DataType>(0.01),
-             gain = static_cast<DataType>(10),
-             cutoff = static_cast<DataType>(.4);
-	ImageVectorType  amp, F, R1, R2, a_n, E, s, a_max, W,
-                     fe, r1, r2;
-	const auto ref = this->get_layer(alpha).fe;
-    amp.init(ref.get_width(), ref.get_height(), ref.get_nbDimensions(), true);
-    F.init(ref.get_width(), ref.get_height(), ref.get_nbDimensions(), true);
-    R1.init(ref.get_width(), ref.get_height(), ref.get_nbDimensions(), true);
-    R2.init(ref.get_width(), ref.get_height(), ref.get_nbDimensions(), true);
-//    s.init(ref.get_width(), ref.get_height(), ref.get_nbDimensions(), true);
-    a_max.init(ref.get_width(), ref.get_height(), ref.get_nbDimensions(), true);
-    W.init(ref.get_width(), ref.get_height(), ref.get_nbDimensions(), true);
-
-    for (int i = alpha; i <= beta; ++i)
-    {
-        const RieszLayer<DataType> layer = this->get_layer(i);
-
-        fe = layer.fe;
-        r1 = layer.r1;
-        r2 = layer.r2;
-
-        for (int j = i; j != alpha; --j) // TODO using expand for practical reasons, but this operation applies gaussian blur, we probably shouldn't use it
-        {
-            fe = this->expand(fe);
-            r1 = this->expand(r1);
-            r2 = this->expand(r2);
-        }
-
-        // E_n(x)
-        F += fe;
-        R1 += r1;
-        R2 += r2;
-
-
-        // A_n(x)
-        fe *= fe;
-        r1 *= r1;
-        r2 *= r2;
-
-        a_n = fe + r1 + r2;
-        a_n.parallel_for_all_images
-        (
-            [](ImageScalar<T> &image)
-            {
-                image.parallel_for_all_pixels([](T &pix) { pix = sqrt(pix); });
-            }
-        );
-        amp += a_n;
-
-        // Spread
-        a_max.parallel_for_all_images
-        (
-             [&](ImageScalar<T> &image, unsigned int d)
-             {
-                 image.parallel_for_all_pixels([&](T &pix, int x, int y) { pix = std::max(pix, a_n.get_pixel(x, y, d)); });
-             }
-        );
-    }
-
-    // E(x)
-    // Kovesi's approach for multidimensional signal is to cover all frequency orientations using a series of filter per orientation. He then computes and sums the energy for each orientation individually.
-    // We could maybe compute two energies, horizontal and vertical, as r1 and r2 are akin to H. and V. gradients.
-    F *= F;
-    R1 *= R1;
-    R2 *= R2;
-    E = F + R1 + R2;
-    E.parallel_for_all_images
-    (
-        [](ImageScalar<T> &image)
-        {
-            image.parallel_for_all_pixels([](T &pix) { pix = sqrt(pix); });
-        }
-    );
-
-    E /= amp + eps;
-
-    // Weighting function
-    s = amp / ((a_max+eps) * (beta-alpha+1));
-    s.parallel_for_all_images
-    (
-        [&](ImageScalar<T> &image)
-        {
-            image.parallel_for_all_pixels([&](T &pix) { pix = 1. / (1 + exp(gain*(cutoff-pix))); });
-        }
-    );
-
-    E *= s;
-
-//    DataType mn = static_cast<DataType>(FLT_MAX),
-//             mx = static_cast<DataType>(-FLT_MAX);
-//    E.for_all_images
-//    (
-//        [&](ImageScalar<T> &image)
-//        {
-//            image.for_all_pixels([&](const T &pix) { mn = std::min(mn, pix); mx = std::max(mx, pix); });
-//        }
-//    );
-//    std::cout << "Min " << mn << "  Max " << mx << std::endl;
-
-    return E;
 }
 
 template <typename T>
@@ -864,7 +759,10 @@ public:
     inline RieszPyr();
 
     inline void init(const Ref<Image> &image, unsigned int depth);
+	inline bool is_initialized() const;
+	inline int get_depth() const;
 	inline Dictionary get_layer(unsigned int depth, CoordType type = CoordType::POLAR);
+	inline RieszPyramid<double> get_pyramid() const;
     inline Dictionary pack_in_texture(CoordType type = CoordType::CARTESIAN) const;
     inline Ref<Image> phase_congruency(unsigned int alpha, unsigned int beta, CoordType type = CoordType::CARTESIAN);
     inline Ref<Image> reconstruct() const;
@@ -888,6 +786,16 @@ void RieszPyr::init(const Ref<Image> &image, unsigned int depth)
     ImageVector<double> img;
     img.fromImage(image);
     pyr = RieszPyramid<double>(img, depth);
+}
+
+bool RieszPyr::is_initialized() const
+{
+	return pyr.is_initialized();
+}
+
+int RieszPyr::get_depth() const
+{
+	return pyr.get_depth();
 }
 
 Dictionary RieszPyr::get_layer(unsigned int depth, CoordType type)
@@ -943,6 +851,11 @@ Dictionary RieszPyr::get_layer(unsigned int depth, CoordType type)
 	return dict;
 }
 
+RieszPyramid<double> RieszPyr::get_pyramid() const
+{
+	return pyr;
+}
+
 Dictionary RieszPyr::pack_in_texture(CoordType type) const
 {
     Dictionary dict;
@@ -996,30 +909,6 @@ Dictionary RieszPyr::pack_in_texture(CoordType type) const
     }
 
     return dict;
-}
-
-Ref<Image> RieszPyr::phase_congruency(unsigned int alpha, unsigned int beta, TexSyn::RieszPyr::CoordType type)
-{
-    Ref<Image> pc = Image::create_empty(pyr.get_layer(alpha).fe.get_width(), pyr.get_layer(alpha).fe.get_height(), true, Image::FORMAT_RF);
-
-    std::string system;
-    switch (type)
-    {
-        case CoordType::CARTESIAN:
-            system = "cartesian";
-            break;
-        case CoordType::POLAR:
-            system = "polar";
-            break;
-        default:
-            print_line("Unrecognized type, unable to compute phase congruency.");
-            return pc;
-    };
-
-    pyr.phase_congruency(alpha, beta, system).toImage(pc);
-	pc->generate_mipmaps();
-
-    return pc;
 }
 
 Ref<Image> RieszPyr::reconstruct() const
