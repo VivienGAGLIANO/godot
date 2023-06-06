@@ -103,18 +103,67 @@ ImageScalar<T> phase_congruency(const RieszPyramid<T> &pyramid, uint alpha, uint
 } // namespace TexSyn
 
 
-Ref<Image> RieszSampling::phase_congruency(const Ref<TexSyn::RieszPyr> &pyramid, int alpha, int beta)
+Ref<Image> RieszSampling::phase_congruency(const Ref<TexSyn::RieszPyr> &pyramid, int alpha, int beta) const
 {
 	const TexSyn::ImageScalar<double> pc = TexSyn::RieszSampling::phase_congruency<double>(pyramid->get_pyramid(), alpha, beta);
-	Ref<Image> pc_image = Image::create_empty(pc.get_width(), pc.get_height(), true, Image::FORMAT_RGBF);
+	Ref<Image> pc_image = Image::create_empty(pc.get_width(), pc.get_height(), true, Image::FORMAT_RF);
 	pc.toImage(pc_image, 0);
 	pc_image->generate_mipmaps();
 
 	return pc_image;
 }
 
+Array RieszSampling::quantize_texture(Ref<Image> image, Array extremum, uint n_layers) const
+{
+	ERR_FAIL_COND_V_MSG(image.is_null(), Array(), "image must not be null.");
+	ERR_FAIL_COND_V_MSG(image->is_empty(), Array(), "image must not be empty.");
+
+	Array layers;
+	TexSyn::ImageScalar<double> texture;
+	texture.fromImage(image);
+
+	double mn = DBL_MAX, mx = DBL_MIN;
+	texture.for_all_pixels([&mn, &mx] (const TexSyn::ImageScalar<double>::DataType &pix)
+			{
+				if (pix < mn) mn = pix;
+				if (pix > mx) mx = pix;
+			});
+
+	print_line("Quantized texture: min ", mn, "  max ", mx);
+//	std::cout << "Quantized texture: min " << mn << "  max " << mx << std::endl;
+
+	for (size_t i = 0; i < n_layers; ++i)
+	{
+		auto inf = mn + (mx-mn)*i/double(n_layers),
+			 sup = inf + (mx-mn)/double(n_layers);
+
+		TexSyn::ImageScalar<double> tex;
+		tex.init(texture.get_width(), texture.get_height(), true);
+		int c = 0;
+		texture.for_all_pixels([&tex, inf, sup, &c] (const TexSyn::ImageScalar<double>::DataType &pix, int x, int y)
+				{
+					if (inf <= pix && pix < sup) { tex.set_pixel(x, y, pix); ++c;}
+				});
+		print_line("Layer ", i, " in the range ", inf, " ", sup, "; pixel count ", c, " (", (float)c/(image->get_width()*image->get_height())*100., "%)");
+//		std::cout << "Layer " << i << " in the range " << inf << " " << sup << " : pixel count " << c << " (" << (float)c/(image->get_width()*image->get_height())*100. << "%)" << std::endl;
+
+		Ref<Image> layer = Image::create_empty(image->get_width(), image->get_height(), false, image->get_format());
+		tex.toImage(layer, 0);
+
+		layers.append(layer);
+		//        layers.append(layer.get_ref_ptr());
+	}
+
+	extremum.clear();
+	extremum.append(mn);
+	extremum.append(mx);
+
+
+	return layers;
+}
 
 void RieszSampling::_bind_methods()
 {
 	ClassDB::bind_method(D_METHOD("phase_congruency", "pyramid", "alpha", "beta"), &RieszSampling::phase_congruency);
+	ClassDB::bind_method(D_METHOD("quantize_texture", "image", "extremum", "n_layers"), &RieszSampling::quantize_texture);
 }

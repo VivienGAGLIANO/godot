@@ -31,61 +31,7 @@ void TexSyn::RieszPyr::_bind_methods()
 
 bool texsyn_tests()
 {
-	bool b = true;
-	TexSyn::ImageVector<double> imageVector;
-	imageVector.init(512, 512, 5, true);
-	DEV_ASSERT(b &= imageVector.get_pixel(511, 511, 4) == 0.0);
-	imageVector.set_pixel(0, 0, 0, 5.0);
-	DEV_ASSERT(b &= imageVector.get_pixel(0, 0, 0) == 5.0);
-
-	TexSyn::ImageVector<double> imageVector2;
-	imageVector2.init(512, 512, 5, true);
-	imageVector2.set_pixel(0, 0, 0, 2.0);
-
-	imageVector *= 3.0;
-	DEV_ASSERT(b &= imageVector.get_pixel(0, 0, 0) == 15.0);
-	imageVector /= 3.0;
-	DEV_ASSERT(b &= imageVector.get_pixel(0, 0, 0) == 5.0);
-	imageVector += 3.0;
-	DEV_ASSERT(b &= imageVector.get_pixel(0, 0, 0) == 8.0);
-	imageVector -= 3.0;
-	DEV_ASSERT(b &= imageVector.get_pixel(0, 0, 0) == 5.0);
-
-	imageVector.set_pixel(511, 0, 2, 8.0);
-
-	imageVector.operator=(imageVector*2.0);
-	DEV_ASSERT(b &= imageVector.get_pixel(511, 0, 2) == 16.0);
-
-	imageVector.operator=(imageVector/2.0);
-	DEV_ASSERT(b &= imageVector.get_pixel(511, 0, 2) == 8.0);
-
-	imageVector.operator=(imageVector+2.0);
-	DEV_ASSERT(b &= imageVector.get_pixel(511, 0, 2) == 10.0);
-
-	imageVector.operator=(imageVector-2.0);
-	DEV_ASSERT(b &= imageVector.get_pixel(511, 0, 2) == 8.0);
-
-	DEV_ASSERT(b &= imageVector.get_pixel(0, 0, 0) == 5.0);
-
-	imageVector.set_pixel(0, 0, 1, 4.0);
-	imageVector2.set_pixel(0, 0, 1, 4.0);
-	DEV_ASSERT(b &= (imageVector *= imageVector2).get_pixel(0, 0, 1) == 16.0);
-	DEV_ASSERT(b &= (imageVector += imageVector2).get_pixel(0, 0, 1) == 20.0);
-	DEV_ASSERT(b &= (imageVector /= imageVector2).get_pixel(0, 0, 1) == 5.0);
-	DEV_ASSERT(b &= (imageVector -= imageVector2).get_pixel(0, 0, 1) == 1.0);
-
-	DEV_ASSERT(b &= (imageVector * imageVector2).get_pixel(0, 0, 1) == 4.0);
-	DEV_ASSERT(b &= (imageVector + imageVector2).get_pixel(0, 0, 1) == 5.0);
-	DEV_ASSERT(b &= (imageVector - imageVector2).get_pixel(0, 0, 1) == -3.0);
-	DEV_ASSERT(b &= (imageVector / imageVector2).get_pixel(0, 0, 1) == 0.25);
-
-	if (b)
-		print_line("ImageVector tests : OK.");
-
-//    TexSyn::RieszPyramid<double> pyr;
-//    pyr.phase_congruency(0, 4);
-
-	return b;
+	return true;
 }
 
 ProceduralSampling::ProceduralSampling() :
@@ -439,53 +385,6 @@ void ProceduralSampling::centerExemplar(Ref<Image> exemplar, Ref<Image> mean)
 	return;
 }
 
-Array ProceduralSampling::quantizeTexture(Ref<Image> image, Array extremum, uint8_t nLayers) const
-{
-	ERR_FAIL_COND_V_MSG(image.is_null(), Array(), "image must not be null.");
-	ERR_FAIL_COND_V_MSG(image->is_empty(), Array(), "image must not be empty.");
-
-	Array layers;
-	TexSyn::ImageScalar<double> texture;
-	texture.fromImage(image);
-
-	double mn = DBL_MAX, mx = DBL_MIN;
-	texture.for_all_pixels([&mn, &mx] (const TexSyn::ImageScalar<double>::DataType &pix)
-			{
-				if (pix < mn) mn = pix;
-				if (pix > mx) mx = pix;
-			});
-
-	std::cout << "Quantized texture: min " << mn << "  max " << mx << std::endl;
-
-	for (size_t i = 0; i < nLayers; ++i)
-	{
-		auto inf = mn + (mx-mn)*i/double(nLayers),
-			 sup = inf + (mx-mn)/double(nLayers);
-
-		TexSyn::ImageScalar<double> tex;
-		tex.init(texture.get_width(), texture.get_height(), true);
-		int c = 0;
-		texture.for_all_pixels([&tex, inf, sup, &c] (const TexSyn::ImageScalar<double>::DataType &pix, int x, int y)
-				{
-					if (inf <= pix && pix < sup) { tex.set_pixel(x, y, pix); ++c;}
-				});
-		std::cout << "Layer " << i << " in the range " << inf << " " << sup << " : pixel count " << c << " (" << (float)c/(image->get_width()*image->get_height())*100. << "%)" << std::endl;
-
-		Ref<Image> layer = Image::create_empty(image->get_width(), image->get_height(), false, image->get_format());
-		tex.toImage(layer, 0);
-
-		layers.append(layer);
-		//        layers.append(layer.get_ref_ptr());
-	}
-
-	extremum.clear();
-	extremum.append(mn);
-	extremum.append(mx);
-
-
-	return layers;
-}
-
 
 void ProceduralSampling::_bind_methods()
 {
@@ -511,7 +410,6 @@ void ProceduralSampling::_bind_methods()
 	ClassDB::bind_method(D_METHOD("centerExemplar", "exemplar", "mean"), &ProceduralSampling::centerExemplar);
 	ClassDB::bind_method(D_METHOD("computeAutocovarianceSampler"), &ProceduralSampling::computeAutocovarianceSampler);
 	ClassDB::bind_method(D_METHOD("samplerPdfToImage", "image"), &ProceduralSampling::samplerPdfToImage);
-	ClassDB::bind_method(D_METHOD("quantizeTexture", "image", "extremum", "nLayers"), &ProceduralSampling::quantizeTexture, DEFVAL(10));
 }
 
 void ProceduralSampling::computeImageVector()

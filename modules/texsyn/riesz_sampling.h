@@ -22,8 +22,8 @@ class RieszSampling : public RefCounted
 public:
 	RieszSampling() = default;
 
-	Ref<Image> phase_congruency(const Ref<TexSyn::RieszPyr> &pyramid, int alpha, int beta);
-	Array quantize_texture(Ref<TexSyn::RieszPyr>, Array extremum, uint nLayers);
+	Ref<Image> phase_congruency(const Ref<TexSyn::RieszPyr> &pyramid, int alpha, int beta) const;
+	Array quantize_texture(Ref<Image> image, Array extremum, uint n_layers) const;
 	Ref<Image> partition_image(const Ref<Image> &image, const Vector<Vector<int>> &initial_centers);
 
 protected:
