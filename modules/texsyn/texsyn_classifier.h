@@ -3,12 +3,12 @@
 
 #include "core/io/image.h"
 #include "image_vector.h"
-#include <vector>
 
 namespace TexSyn
 {
 
-Color vector_to_color(const Vector &v)
+template <typename T>
+Color vector_to_color(const Vector<T> &v)
 {
 	ERR_FAIL_COND_V_MSG(v.size() <= 0 || v.size() > 4, Color(), "vector must have between one and four channels.");
 
@@ -33,8 +33,9 @@ Color vector_to_color(const Vector &v)
 double color_squared_distance(const Color &c1, const Color &c2)
 {
 	Color dif = c1-c2;
+	Color prod = dif*dif;
 
-	return dif*dif;
+	return prod.r + prod.g + prod.b + prod.a;
 }
 
 
@@ -43,18 +44,21 @@ class ClassifierBase
 {
 public:
 	ClassifierBase();
+
+	virtual ~ClassifierBase();
 //	ClassifierBase(const ImageVector<T> &image);
 
-	virtual ImageScalar<int> classify(const ImageVector<T> &image, const std::vector<std::pair<int,int>> &initial_centers) = 0;
+	virtual ImageScalar<int> classify(const ImageVector<T> &image, const Vector<Vector2> &initial_centers) = 0;
 
 protected:
 //	ImageVector<T> m_image;
 };
 
 template <typename T>
-ClassifierBase<T>::ClassifierBase()
-	: m_image()
-{}
+ClassifierBase<T>::ClassifierBase() {}
+
+template <typename T>
+ClassifierBase<T>::~ClassifierBase() {}
 
 //template <typename T>
 //ClassifierBase<T>::ClassifierBase(const ImageVector<T> &image)
@@ -68,8 +72,9 @@ class ClassifierKMeans : public ClassifierBase<T>
 public:
 	ClassifierKMeans(int max_iterations);
 //	ClassifierKMeans(const ImageVector<T> &image);
+	~ClassifierKMeans();
 
-	virtual ImageScalar<int> classify(const ImageVector<T> &image, const Vector<Vector<int>> &initial_centers) override;
+	virtual ImageScalar<int> classify(const ImageVector<T> &image, const PackedVector2Array &initial_centers) override;
 
 private:
 	int m_K;
@@ -86,22 +91,26 @@ ClassifierKMeans<T>::ClassifierKMeans(int max_iterations)
 //		: ClassifierBase<T>(image), m_n_clusters()
 //{}
 
+template <typename T>
+ClassifierKMeans<T>::~ClassifierKMeans() {}
+
 // initial_centers a vector of coordinates for the pixels to take as initial cluster centers
 template <typename T>
-ImageScalar<int> ClassifierKMeans<T>::classify(const ImageVector<T> &image, const Vector<Vector<int>> &initial_centers)
+ImageScalar<int> ClassifierKMeans<T>::classify(const ImageVector<T> &image, const PackedVector2Array &initial_centers)
 {
-	ERR_FAIL_COND_V_MSG(image.ptr() == nullptr, "image must not be null.");
-	ERR_FAIL_COND_V_MSG(image.get_nbDimensions() != 3, "image must have exactly 3 channels.");
+	ERR_FAIL_COND_V_MSG(!image.is_initialized(), ImageScalar<int>(), "image must not be null.");
+	ERR_FAIL_COND_V_MSG(image.get_nbDimensions() != 3, ImageScalar<int>(), "image must have exactly 3 channels.");
 
 	m_K = initial_centers.size();
 	ImageScalar<int> regions;
 	regions.init(image.get_width(), image.get_height(), true);
-	Vector<Color> centers(initial_centers.size()); // centers a vector of cluster centers, i.e. the color mean of each region's pixels (as Color type)
+	Vector<Color> centers; // centers a vector of cluster centers, i.e. the color mean of each region's pixels (as Color type)
+	centers.resize(initial_centers.size());
 
-	Vector::ConstIterator cit = initial_centers.begin();
-	Vector::Iterator it = centers.begin()
+	Vector<Vector2>::ConstIterator cit = initial_centers.begin();
+	Vector<Color>::Iterator it = centers.begin();
 	for (; cit != initial_centers.end(); ++cit, ++it)
-		*it = vector_to_color(image.get_pixel((*cit)[0], (*cit)[1]));
+		*it = vector_to_color(image.get_pixel((*cit).x, (*cit).y));
 
 	for (int i = 0; i < m_max_iterations; ++i)
 	{
@@ -115,7 +124,7 @@ ImageScalar<int> ClassifierKMeans<T>::classify(const ImageVector<T> &image, cons
 
 			for (int k = 0; k < m_K; ++k)
 			{
-				Color current_center = centers[i];
+				Color current_center = centers[k];
 				double distance = color_squared_distance(pixel, current_center);
 
 				if (distance < min_distance) regions.set_pixel(x, y, k);
@@ -131,11 +140,11 @@ ImageScalar<int> ClassifierKMeans<T>::classify(const ImageVector<T> &image, cons
 			for (int x = 0; x < image.get_width(); ++x)
 				if (regions.get_pixel(x, y) == k)
 				{
-					mean += vector_to_color(imageget_pixel(x,y));
+					mean += vector_to_color(image.get_pixel(x,y));
 					++count;
 				}
 
-			centers[k] = mean / count;
+			centers.set(k, mean / count);
 		}
 	}
 

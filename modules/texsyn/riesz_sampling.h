@@ -3,6 +3,7 @@
 
 #include "core/object/ref_counted.h"
 #include "core/io/image.h"
+#include "core/math/vector2.h"
 #include "image_pyramid.h"
 
 namespace TexSyn
@@ -22,9 +23,10 @@ class RieszSampling : public RefCounted
 public:
 	RieszSampling() = default;
 
-	Ref<Image> phase_congruency(const Ref<TexSyn::RieszPyr> &pyramid, int alpha, int beta) const;
-	Array quantize_texture(Ref<Image> image, Array extremum, uint n_layers) const;
-	Ref<Image> partition_image(const Ref<Image> &image, const Vector<Vector<int>> &initial_centers);
+	static Ref<Image> phase_congruency(const Ref<TexSyn::RieszPyr> &pyramid, uint alpha, uint beta);
+	static Array quantize_texture(Ref<Image> image, Array extremum, uint n_layers);
+	static Ref<Image> partition_image(const Ref<Image> &image, const PackedVector2Array &initial_centers);
+	static Array precompute_sampler_realization(uint realization_size, const Array quantified_pc, uint n_quantification, const Ref<Image> &classes, uint n_classes);
 
 protected:
 	static void _bind_methods();

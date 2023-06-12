@@ -1,6 +1,8 @@
 #include "image_pyramid.h"
 #include "image_vector.h"
 #include "riesz_sampling.h"
+#include "texsyn_classifier.h"
+#include "texsyn_procedural_sampling.h"
 
 namespace TexSyn
 {
@@ -59,7 +61,7 @@ ImageScalar<T> phase_congruency(const RieszPyramid<T> &pyramid, uint alpha, uint
 		amp += amp_n;
 
 		// Spread
-		a_max.parallel_for_all_pixels([&](double &pix, int x, int y) { pix = std::max(pix, amp_n.get_pixel(x, y)); });
+		a_max.parallel_for_all_pixels([&](double &pix, int x, int y) { pix = MAX(pix, amp_n.get_pixel(x, y)); });
 	}
 
 	// E(x)
@@ -85,10 +87,10 @@ ImageScalar<T> phase_congruency(const RieszPyramid<T> &pyramid, uint alpha, uint
 	//    (
 	//        [&](ImageScalar<T> &image)
 	//        {
-	//            image.for_all_pixels([&](const T &pix) { mn = std::min(mn, pix); mx = std::max(mx, pix); });
+	//            image.for_all_pixels([&](const T &pix) { mn = MIN(mn, pix); mx = MAX(mx, pix); });
 	//        }
 	//    );
-	//    std::cout << "Min " << mn << "  Max " << mx << std::endl;
+	//    print_line("Min ", mn, " Max ", mx);
 
 	// TODO have a better TexSyn -> Godot format conversion
 //	Ref<Image> pc_image = Image::create_empty(pc.get_width(), pc.get_height(), true, Image::FORMAT_RGBF);
@@ -103,7 +105,7 @@ ImageScalar<T> phase_congruency(const RieszPyramid<T> &pyramid, uint alpha, uint
 } // namespace TexSyn
 
 
-Ref<Image> RieszSampling::phase_congruency(const Ref<TexSyn::RieszPyr> &pyramid, int alpha, int beta) const
+Ref<Image> RieszSampling::phase_congruency(const Ref<TexSyn::RieszPyr> &pyramid, uint alpha, uint beta)
 {
 	const TexSyn::ImageScalar<double> pc = TexSyn::RieszSampling::phase_congruency<double>(pyramid->get_pyramid(), alpha, beta);
 	Ref<Image> pc_image = Image::create_empty(pc.get_width(), pc.get_height(), true, Image::FORMAT_RF);
@@ -113,7 +115,7 @@ Ref<Image> RieszSampling::phase_congruency(const Ref<TexSyn::RieszPyr> &pyramid,
 	return pc_image;
 }
 
-Array RieszSampling::quantize_texture(Ref<Image> image, Array extremum, uint n_layers) const
+Array RieszSampling::quantize_texture(Ref<Image> image, Array extremum, uint n_layers)
 {
 	ERR_FAIL_COND_V_MSG(image.is_null(), Array(), "image must not be null.");
 	ERR_FAIL_COND_V_MSG(image->is_empty(), Array(), "image must not be empty.");
@@ -130,7 +132,6 @@ Array RieszSampling::quantize_texture(Ref<Image> image, Array extremum, uint n_l
 			});
 
 	print_line("Quantized texture: min ", mn, "  max ", mx);
-//	std::cout << "Quantized texture: min " << mn << "  max " << mx << std::endl;
 
 	for (size_t i = 0; i < n_layers; ++i)
 	{
@@ -145,7 +146,6 @@ Array RieszSampling::quantize_texture(Ref<Image> image, Array extremum, uint n_l
 					if (inf <= pix && pix < sup) { tex.set_pixel(x, y, pix); ++c;}
 				});
 		print_line("Layer ", i, " in the range ", inf, " ", sup, "; pixel count ", c, " (", (float)c/(image->get_width()*image->get_height())*100., "%)");
-//		std::cout << "Layer " << i << " in the range " << inf << " " << sup << " : pixel count " << c << " (" << (float)c/(image->get_width()*image->get_height())*100. << "%)" << std::endl;
 
 		Ref<Image> layer = Image::create_empty(image->get_width(), image->get_height(), false, image->get_format());
 		tex.toImage(layer, 0);
@@ -162,8 +162,68 @@ Array RieszSampling::quantize_texture(Ref<Image> image, Array extremum, uint n_l
 	return layers;
 }
 
+Ref<Image> RieszSampling::partition_image(const Ref<Image> &image, const PackedVector2Array &initial_centers)
+{
+	TexSyn::ImageVector<double> img;
+	img.init(image->get_width(), image->get_height(), TexSyn::getNbDimensionsFromFormat(image->get_format()), false);
+	img.fromImage(image);
+
+	TexSyn::ClassifierBase<double> *classifier = memnew(TexSyn::ClassifierKMeans<double>(2));
+	TexSyn::ImageScalar<int> classification = classifier->classify(img, initial_centers);
+	memdelete(classifier);
+
+	Ref<Image> out = Image::create_empty(image->get_width(), image->get_height(), false, Image::FORMAT_L8);
+	classification.toImage(out, 0);
+
+	return out;
+}
+
+// TODO make this parallel
+Array RieszSampling::precompute_sampler_realization(uint realization_size, const Array quantified_pc, uint n_quantification, const Ref<Image> &classes, uint n_classes)
+{
+	ERR_FAIL_COND_V_MSG(quantified_pc.is_empty(), Array(), "phase congruency must not be empty.");
+	ERR_FAIL_COND_V_MSG(classes->is_empty(), Array(), "classes must not be empty.");
+
+	Array realizations;
+	TexSyn::ProceduralSampling<float> p_sampling;
+
+	for (uint k = 0; k < 1/*n_classes*/; ++k) // TODO I WAS HERE essayer pour 1 classe, renvoyer une texture plutôt qu'un array
+	{
+		TexSyn::ImageVector<float> c_realization;
+		c_realization.init(realization_size, n_quantification, 2);
+		TexSyn::ImageScalar<float> c_mask(classes);
+		c_mask.parallel_for_all_pixels([k](int pix) { pix = (pix == k) ? 1 : 0; });
+
+		for (uint q = 0; q < n_quantification; ++q)
+		{
+			TexSyn::ImageScalar<float> pdf = TexSyn::ImageScalar<float>(quantified_pc[q]) * c_mask;
+			TexSyn::SamplerImportance *sampler = memnew(TexSyn::SamplerImportance(pdf));
+			p_sampling.set_sampler(sampler);
+
+			TexSyn::ImageVector<float> pc_realization;
+			p_sampling.preComputeSamplerRealization(pc_realization, realization_size);
+			c_realization.set_rect(pc_realization, 0, q);
+
+			memdelete(sampler);
+		}
+
+		Ref<Image> c_realization_img = Image::create_empty(realization_size, n_quantification, false, Image::FORMAT_RGF);
+		print_line("Class ", k, " image creation done");
+		c_realization.toImage(c_realization_img);
+		print_line("Class ", k, " texsyn -> godot conversion done");
+		realizations.append(c_realization_img);
+		print_line("Class ", k, " append to array done");
+	}
+
+	print_line("Now we return !");
+	return realizations;
+}
+
+
 void RieszSampling::_bind_methods()
 {
-	ClassDB::bind_method(D_METHOD("phase_congruency", "pyramid", "alpha", "beta"), &RieszSampling::phase_congruency);
-	ClassDB::bind_method(D_METHOD("quantize_texture", "image", "extremum", "n_layers"), &RieszSampling::quantize_texture);
+	ClassDB::bind_static_method("RieszSampling", D_METHOD("phase_congruency", "pyramid", "alpha", "beta"), &RieszSampling::phase_congruency);
+	ClassDB::bind_static_method("RieszSampling", D_METHOD("quantize_texture", "image", "extremum", "n_layers"), &RieszSampling::quantize_texture);
+	ClassDB::bind_static_method("RieszSampling", D_METHOD("partition_image", "image", "initial_centers"), &RieszSampling::partition_image);
+	ClassDB::bind_static_method("RieszSampling", D_METHOD("precompute_sampler_realization", "realization_size", "quantified_pc", "n_quantification", "classes", "n_classes"), &RieszSampling::precompute_sampler_realization);
 }

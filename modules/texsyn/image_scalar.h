@@ -99,7 +99,7 @@ public:
 	using PosType=Vector2i;
 
 	ImageScalar();
-	ImageScalar(const Image &image);
+	ImageScalar(const Ref<Image> &image);
 	ImageScalar(const ImageScalar &other);
 
 	~ImageScalar();
@@ -280,16 +280,17 @@ ImageScalar<T>::ImageScalar():
 {}
 
 template<typename T>
-ImageScalar<T>::ImageScalar(const Image &image):
-	m_width(image.get_width()),
-	m_height(image.get_height()),
+ImageScalar<T>::ImageScalar(const Ref<Image> &image):
+	m_width(image->get_width()),
+	m_height(image->get_height()),
 	m_data()
 {
+	ERR_FAIL_COND_MSG(getNbDimensionsFromFormat(image->get_format()) != 1, "image must have only one channel.");
 	m_data.resize(m_width * m_height);
 	for_all_pixels([&] (DataType &pix, int x, int y)
 	{
-		Color c = image.get_pixel(x, y);
-		pix = c.get_luminance();
+		Color c = image->get_pixel(x, y);
+		pix = c.r;
 	});
 }
 
