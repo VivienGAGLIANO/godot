@@ -9,7 +9,7 @@
 namespace TexSyn
 {
 template <typename T>
-ImageScalar<T> phase_congruency(const RieszPyramid<T> &pyramid, uint alpha, uint beta);
+ImageScalar<T> phase_congruency(const RieszPyramid<T> &pyramid, int alpha, int beta);
 
 } // namespace TexSyn
 
@@ -23,10 +23,10 @@ class RieszSampling : public RefCounted
 public:
 	RieszSampling() = default;
 
-	static Ref<Image> phase_congruency(const Ref<TexSyn::RieszPyr> &pyramid, uint alpha, uint beta);
-	static Array quantize_texture(Ref<Image> image, Array extremum, uint n_layers);
+	static Ref<Image> phase_congruency(const Ref<TexSyn::RieszPyr> &pyramid, int alpha, int beta);
+	static Array quantize_texture(Ref<Image> image, Array extremum, int n_layers);
 	static Ref<Image> partition_image(const Ref<Image> &image, const PackedVector2Array &initial_centers);
-	static Array precompute_sampler_realization(uint realization_size, const Array quantified_pc, uint n_quantification, const Ref<Image> &classes, uint n_classes);
+	static Array precompute_sampler_realization(int realization_size, const Array quantified_pc, int n_quantification, const Ref<Image> &classes, int n_classes);
 
 protected:
 	static void _bind_methods();

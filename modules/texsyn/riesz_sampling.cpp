@@ -10,7 +10,7 @@ namespace RieszSampling {
 
 
 template <typename T>
-ImageScalar<T> phase_congruency(const RieszPyramid<T> &pyramid, uint alpha, uint beta) {
+ImageScalar<T> phase_congruency(const RieszPyramid<T> &pyramid, int alpha, int beta) {
 	ERR_FAIL_COND_V_MSG(!pyramid.is_initialized(), ImageScalar<T>(), "pyramid must be initialized.");
 	ERR_FAIL_COND_V_MSG((alpha > beta) || (beta >= pyramid.get_depth()), ImageScalar<T>(), "Alpha must be less than beta, and beta strictly less than pyramid depth.");
 
@@ -21,7 +21,7 @@ ImageScalar<T> phase_congruency(const RieszPyramid<T> &pyramid, uint alpha, uint
 	ImageScalar<T> pc, amp, f, r1, r2, energy, spread, a_max,
 			fe_n, r1_n, r2_n, amp_n;
 	const ImageVector<T> ref = pyramid.get_layer(alpha).fe;
-	const int width = ref.get_width(), height = ref.get_height(), dim = ref.get_nbDimensions();
+	const int width = ref.get_width(), height = ref.get_height();
 	amp.init(width, height, true);
 	f.init(width, height, true);
 	r1.init(width, height, true);
@@ -105,7 +105,7 @@ ImageScalar<T> phase_congruency(const RieszPyramid<T> &pyramid, uint alpha, uint
 } // namespace TexSyn
 
 
-Ref<Image> RieszSampling::phase_congruency(const Ref<TexSyn::RieszPyr> &pyramid, uint alpha, uint beta)
+Ref<Image> RieszSampling::phase_congruency(const Ref<TexSyn::RieszPyr> &pyramid, int alpha, int beta)
 {
 	const TexSyn::ImageScalar<double> pc = TexSyn::RieszSampling::phase_congruency<double>(pyramid->get_pyramid(), alpha, beta);
 	Ref<Image> pc_image = Image::create_empty(pc.get_width(), pc.get_height(), true, Image::FORMAT_RF);
@@ -115,7 +115,7 @@ Ref<Image> RieszSampling::phase_congruency(const Ref<TexSyn::RieszPyr> &pyramid,
 	return pc_image;
 }
 
-Array RieszSampling::quantize_texture(Ref<Image> image, Array extremum, uint n_layers)
+Array RieszSampling::quantize_texture(Ref<Image> image, Array extremum, int n_layers)
 {
 	ERR_FAIL_COND_V_MSG(image.is_null(), Array(), "image must not be null.");
 	ERR_FAIL_COND_V_MSG(image->is_empty(), Array(), "image must not be empty.");
@@ -133,7 +133,7 @@ Array RieszSampling::quantize_texture(Ref<Image> image, Array extremum, uint n_l
 
 	print_line("Quantized texture: min ", mn, "  max ", mx);
 
-	for (size_t i = 0; i < n_layers; ++i)
+	for (int i = 0; i < n_layers; ++i)
 	{
 		auto inf = mn + (mx-mn)*i/double(n_layers),
 			 sup = inf + (mx-mn)/double(n_layers);
@@ -179,7 +179,7 @@ Ref<Image> RieszSampling::partition_image(const Ref<Image> &image, const PackedV
 }
 
 // TODO make this parallel
-Array RieszSampling::precompute_sampler_realization(uint realization_size, const Array quantified_pc, uint n_quantification, const Ref<Image> &classes, uint n_classes)
+Array RieszSampling::precompute_sampler_realization(int realization_size, const Array quantified_pc, int n_quantification, const Ref<Image> &classes, int n_classes)
 {
 	ERR_FAIL_COND_V_MSG(quantified_pc.is_empty(), Array(), "phase congruency must not be empty.");
 	ERR_FAIL_COND_V_MSG(classes->is_empty(), Array(), "classes must not be empty.");
@@ -187,14 +187,14 @@ Array RieszSampling::precompute_sampler_realization(uint realization_size, const
 	Array realizations;
 	TexSyn::ProceduralSampling<float> p_sampling;
 
-	for (uint k = 0; k < 1/*n_classes*/; ++k) // TODO I WAS HERE essayer pour 1 classe, renvoyer une texture plutôt qu'un array
+	for (int k = 0; k < 1/*n_classes*/; ++k) // TODO I WAS HERE essayer pour 1 classe, renvoyer une texture plutôt qu'un array
 	{
 		TexSyn::ImageVector<float> c_realization;
 		c_realization.init(realization_size, n_quantification, 2);
 		TexSyn::ImageScalar<float> c_mask(classes);
 		c_mask.parallel_for_all_pixels([k](int pix) { pix = (pix == k) ? 1 : 0; });
 
-		for (uint q = 0; q < n_quantification; ++q)
+		for (int q = 0; q < n_quantification; ++q)
 		{
 			TexSyn::ImageScalar<float> pdf = TexSyn::ImageScalar<float>(quantified_pc[q]) * c_mask;
 			TexSyn::SamplerImportance *sampler = memnew(TexSyn::SamplerImportance(pdf));

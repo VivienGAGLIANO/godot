@@ -37,7 +37,7 @@ public:
 	using ImageVectorType=ImageVector<DataType>;
 
 	ImagePyramid();
-	ImagePyramid(unsigned int depth);
+	ImagePyramid(int depth);
 	ImagePyramid(const ImagePyramid &other);
 
 	virtual ~ImagePyramid() = 0;
@@ -55,7 +55,7 @@ public:
 	static ImageVectorType reduce(const ImageVectorType &image);
 
 protected:
-	unsigned int m_depth;
+	int m_depth;
 	std::vector<PyramidElement> m_layers;
 };
 
@@ -70,7 +70,7 @@ ImagePyramid<T, element>::ImagePyramid() :
 /// Depth initializing constructor.
 /// \param depth Chosen depth for pyramid. Includes input image.
 template <typename T, typename element>
-ImagePyramid<T, element>::ImagePyramid(unsigned int depth) :
+ImagePyramid<T, element>::ImagePyramid(int depth) :
 	m_depth(depth),
 	m_layers()
 {}
@@ -155,8 +155,8 @@ typename ImagePyramid<T, element>::ImageVectorType ImagePyramid<T, element>::exp
 	ImageVectorType i;
 	i.init(image.get_width()*2, image.get_height()*2, image.get_nbDimensions(), true);
 
-	for (unsigned int x=0; x<image.get_width(); ++x)
-		for (unsigned int y=0; y<image.get_height(); ++y)
+	for (int x=0; x<image.get_width(); ++x)
+		for (int y=0; y<image.get_height(); ++y)
 			for (unsigned int d=0; d<i.get_nbDimensions(); ++d)
 			{
                 auto pix = image.get_pixel(x,y,d);
@@ -206,8 +206,8 @@ typename ImagePyramid<T, element>::ImageVectorType ImagePyramid<T, element>::red
 	ImageVectorType i;
 	i.init(blurred.get_width()/2, blurred.get_height()/2, blurred.get_nbDimensions(), false);
 
-	for (unsigned int x=0; x<i.get_width(); ++x)
-		for (unsigned int y=0; y<i.get_height(); ++y)
+	for (int x=0; x<i.get_width(); ++x)
+		for (int y=0; y<i.get_height(); ++y)
 			for (unsigned int d=0; d<i.get_nbDimensions(); ++d)
 			{
 				i.set_pixel(x, y, d, blurred.get_pixel(2*x+1, 2*y+1, d));
@@ -227,10 +227,10 @@ class GaussianPyramid : public ImagePyramid<T, ImageVector<T>>
 
 public:
 	GaussianPyramid(); // TODO remove the shit out of this if Godot classes can be made without default constructor
-	GaussianPyramid(const ImageVectorType &image, unsigned int depth);
+	GaussianPyramid(const ImageVectorType &image, int depth);
 
 protected:
-	void init(const ImageVectorType &image, unsigned int depth);
+	void init(const ImageVectorType &image, int depth);
 };
 
 
@@ -244,7 +244,7 @@ GaussianPyramid<T>::GaussianPyramid():
 /// \param image Input image size has to be a power of 2
 /// \param depth Number of layers in pyramid (includes original image). Depth must verify depth <= log_2(min(width, length))+1 because each downsize operation halves input size.
 template<typename T>
-GaussianPyramid<T>::GaussianPyramid(const ImageVectorType &image, unsigned int depth):
+GaussianPyramid<T>::GaussianPyramid(const ImageVectorType &image, int depth):
 	ImagePyramid<T, ImageVector<T>>(depth)
 {
 	init(image, depth);
@@ -254,7 +254,7 @@ GaussianPyramid<T>::GaussianPyramid(const ImageVectorType &image, unsigned int d
 /// \param image Input image size has to be a power of 2
 /// \param depth Number of layers in pyramid (includes original image). Depth must verify depth <= log_2(min(width, length))+1 because each downsize operation halves input size.
 template <typename T>
-void GaussianPyramid<T>::init(const GaussianPyramid::ImageVectorType &image, unsigned int depth)
+void GaussianPyramid<T>::init(const GaussianPyramid::ImageVectorType &image, int depth)
 {
 	TEXSYN_ASSERT_IMAGE_POWER_2(image);
 	TEXSYN_ASSERT_IMAGE_DEPTH(image);
@@ -262,7 +262,7 @@ void GaussianPyramid<T>::init(const GaussianPyramid::ImageVectorType &image, uns
 	this->m_layers.reserve(depth);
 	ImageVectorType img = image;
 	this->m_layers.push_back(img);
-	for (unsigned int i=1; i<depth; ++i)
+	for (int i=1; i<depth; ++i)
 	{
 		img = this->reduce(img);
 		this->m_layers.push_back(img);
@@ -279,7 +279,7 @@ class LaplacianPyramid : public ImagePyramid<T, ImageVector<T>>
 
 public:
 	LaplacianPyramid();
-	LaplacianPyramid(const ImageVectorType &image, unsigned int depth);
+	LaplacianPyramid(const ImageVectorType &image, int depth);
 	LaplacianPyramid(const GaussianPyramid<DataType> &pyramid);
 
 protected:
@@ -297,7 +297,7 @@ LaplacianPyramid<T>::LaplacianPyramid() :
 /// \param image Input image size has to be a power of 2
 /// \param depth Number of layers in pyramid (includes original image). Depth must verify depth <= log_2(min(width, length))+1 because each downsize operation halves input size.
 template <typename T>
-LaplacianPyramid<T>::LaplacianPyramid(const LaplacianPyramid::ImageVectorType &image, unsigned int depth) :
+LaplacianPyramid<T>::LaplacianPyramid(const LaplacianPyramid::ImageVectorType &image, int depth) :
 	LaplacianPyramid(GaussianPyramid<DataType>(image, depth))
 {}
 
@@ -411,7 +411,7 @@ void RieszLayer<T>::toPolar(const ImageVector<T> &fe, const ImageVector<T> &r1, 
 	pha.init(fe.get_width(), fe.get_height(), fe.get_nbDimensions(), false);
     pha.parallel_for_all_images
     (
-        [&fe, &im](ImageScalar<T> &image, unsigned int channel)
+        [&fe, &im](ImageScalar<T> &image, int channel)
         {
             image.parallel_for_all_pixels
             (
@@ -423,7 +423,7 @@ void RieszLayer<T>::toPolar(const ImageVector<T> &fe, const ImageVector<T> &r1, 
 	ori.init(fe.get_width(), fe.get_height(), fe.get_nbDimensions(), false);
     ori.parallel_for_all_images
     (
-        [&r1, &r2](ImageScalar<T> &image, unsigned int channel)
+        [&r1, &r2](ImageScalar<T> &image, int channel)
         {
             image.parallel_for_all_pixels
             (
@@ -505,7 +505,7 @@ public:
     };
 
 	RieszPyramid(); // TODO remove this shit if possible. Else init(pyr) has to initialize properly all member variables
-	RieszPyramid(const ImageVectorType &image, unsigned int depth);
+	RieszPyramid(const ImageVectorType &image, int depth);
 	RieszPyramid(const LaplacianPyramid<DataType> &pyramid);
 
     std::vector<ImageVectorType> pack_in_texture(const CoordType &system = CoordType::CARTESIAN) const;
@@ -524,7 +524,7 @@ RieszPyramid<T>::RieszPyramid() :
 {}
 
 template <typename T>
-RieszPyramid<T>::RieszPyramid(const ImageVectorType &image, unsigned int depth) :
+RieszPyramid<T>::RieszPyramid(const ImageVectorType &image, int depth) :
 	RieszPyramid<T>(LaplacianPyramid<T>(image, depth))
 {}
 
@@ -539,7 +539,7 @@ template <typename T>
 std::vector<typename RieszPyramid<T>::ImageVectorType> RieszPyramid<T>::pack_in_texture(const CoordType &system) const
 {
     std::vector<ImageVectorType> packed_textures(3);
-    int width = 0,
+	int width = 0,
         height = this->m_layers.at(0).fe.get_height();
     for (const auto layer : this->m_layers)
         width += layer.fe.get_width();
@@ -622,9 +622,9 @@ class GaussianPyr : public RefCounted
 public:
 	inline GaussianPyr();
 
-	inline void init(const Ref<Image> &image, unsigned int depth);
+	inline void init(const Ref<Image> &image, int depth);
 	inline void init_from_pyramid(const Ref<GaussianPyr> &pyramid);
-	inline Ref<Image> get_layer(unsigned int depth) const;
+	inline Ref<Image> get_layer(int depth) const;
 
 private:
 	inline int get_depth() const;
@@ -642,7 +642,7 @@ GaussianPyr::GaussianPyr()
 	: RefCounted(), pyr()
 {}
 
-void GaussianPyr::init(const Ref<Image> &image, unsigned int depth)
+void GaussianPyr::init(const Ref<Image> &image, int depth)
 {
 	ImageVector<double> img;
 	img.fromImage(image);
@@ -660,7 +660,7 @@ int GaussianPyr::get_depth() const
 }
 
 // TODO select Image format and toImage scale dynamically
-Ref<Image> GaussianPyr::get_layer(unsigned int depth) const
+Ref<Image> GaussianPyr::get_layer(int depth) const
 {
 	TEXSYN_ASSERT_DEPTH(depth);
 
@@ -686,9 +686,9 @@ class LaplacianPyr : public RefCounted
 public:
 	inline LaplacianPyr();
 
-	inline void init(const Ref<Image> &image, unsigned int depth);
+	inline void init(const Ref<Image> &image, int depth);
 	inline void init_from_pyramid(const Ref<LaplacianPyr> &pyramid);
-	inline Ref<Image> get_layer(unsigned int depth) const;
+	inline Ref<Image> get_layer(int depth) const;
 
 private:
 	inline int get_depth() const;
@@ -706,7 +706,7 @@ LaplacianPyr::LaplacianPyr() :
 	pyr()
 {}
 
-void LaplacianPyr::init(const Ref<Image> &image, unsigned int depth)
+void LaplacianPyr::init(const Ref<Image> &image, int depth)
 {
 	ImageVector<double> img;
 	img.fromImage(image);
@@ -718,7 +718,7 @@ void LaplacianPyr::init_from_pyramid(const Ref<LaplacianPyr> &pyramid)
 	pyr = LaplacianPyramid<double>(pyramid->pyr);
 }
 
-Ref<Image> LaplacianPyr::get_layer(unsigned int depth) const
+Ref<Image> LaplacianPyr::get_layer(int depth) const
 {
 	TEXSYN_ASSERT_DEPTH(depth);
 
@@ -758,13 +758,13 @@ public:
 public:
     inline RieszPyr();
 
-    inline void init(const Ref<Image> &image, unsigned int depth);
+    inline void init(const Ref<Image> &image, int depth);
 	inline bool is_initialized() const;
 	inline int get_depth() const;
-	inline Dictionary get_layer(unsigned int depth, CoordType type = CoordType::POLAR);
+	inline Dictionary get_layer(int depth, CoordType type = CoordType::POLAR);
 	inline RieszPyramid<double> get_pyramid() const;
     inline Dictionary pack_in_texture(CoordType type = CoordType::CARTESIAN) const;
-    inline Ref<Image> phase_congruency(unsigned int alpha, unsigned int beta, CoordType type = CoordType::CARTESIAN);
+    inline Ref<Image> phase_congruency(int alpha, int beta, CoordType type = CoordType::CARTESIAN);
     inline Ref<Image> reconstruct() const;
 
 	inline Ref<Image> test(const Ref<Image> &image, const Ref<Image> &subImage) const;
@@ -781,7 +781,7 @@ TexSyn::RieszPyr::RieszPyr() :
     pyr(RieszPyramid<double>())
 {}
 
-void RieszPyr::init(const Ref<Image> &image, unsigned int depth)
+void RieszPyr::init(const Ref<Image> &image, int depth)
 {
     ImageVector<double> img;
     img.fromImage(image);
@@ -798,7 +798,7 @@ int RieszPyr::get_depth() const
 	return pyr.get_depth();
 }
 
-Dictionary RieszPyr::get_layer(unsigned int depth, CoordType type)
+Dictionary RieszPyr::get_layer(int depth, CoordType type)
 {
 	RieszLayer<double> layer = pyr.get_layer(depth);
 	int width = layer.fe.get_width(),
@@ -861,7 +861,7 @@ Dictionary RieszPyr::pack_in_texture(CoordType type) const
     Dictionary dict;
 
     std::vector<ImageVector<double>> packed_textures;
-    int width, height = pyr.get_layer(0).fe.get_height();
+	int width, height = pyr.get_layer(0).fe.get_height();
 
     switch (type)
     {

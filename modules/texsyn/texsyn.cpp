@@ -37,9 +37,9 @@ bool texsyn_tests()
 ProceduralSampling::ProceduralSampling() :
 	m_textureTypeFlag(0),
 	m_imageRefs(),
-	m_proceduralSampling(),
 	m_exemplar(),
 	m_weightedMean(),
+	m_proceduralSampling(),
 	m_meanAccuracy(1024)
 {
 	m_imageRefs.resize(9);
