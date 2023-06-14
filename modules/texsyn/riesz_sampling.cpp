@@ -187,7 +187,7 @@ Array RieszSampling::precompute_sampler_realization(int realization_size, const 
 	Array realizations;
 	TexSyn::ProceduralSampling<float> p_sampling;
 
-	for (int k = 0; k < 1/*n_classes*/; ++k) // TODO I WAS HERE essayer pour 1 classe, renvoyer une texture plutôt qu'un array
+	for (int k = 0; k < n_classes; ++k)
 	{
 		TexSyn::ImageVector<float> c_realization;
 		c_realization.init(realization_size, n_quantification, 2);
@@ -197,25 +197,21 @@ Array RieszSampling::precompute_sampler_realization(int realization_size, const 
 		for (int q = 0; q < n_quantification; ++q)
 		{
 			TexSyn::ImageScalar<float> pdf = TexSyn::ImageScalar<float>(quantified_pc[q]) * c_mask;
-			TexSyn::SamplerImportance *sampler = memnew(TexSyn::SamplerImportance(pdf));
+			TexSyn::SamplerImportance *sampler = memnew(TexSyn::SamplerImportance(pdf, 0));
 			p_sampling.set_sampler(sampler);
 
 			TexSyn::ImageVector<float> pc_realization;
 			p_sampling.preComputeSamplerRealization(pc_realization, realization_size);
 			c_realization.set_rect(pc_realization, 0, q);
 
-			memdelete(sampler);
+			if (q != n_quantification-1) memdelete(sampler);
 		}
 
 		Ref<Image> c_realization_img = Image::create_empty(realization_size, n_quantification, false, Image::FORMAT_RGF);
-		print_line("Class ", k, " image creation done");
 		c_realization.toImage(c_realization_img);
-		print_line("Class ", k, " texsyn -> godot conversion done");
 		realizations.append(c_realization_img);
-		print_line("Class ", k, " append to array done");
 	}
 
-	print_line("Now we return !");
 	return realizations;
 }
 

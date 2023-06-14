@@ -117,4 +117,4 @@ void ProceduralSampling<T>::preComputeSamplerRealization(ImageVector<float> &rea
 
 }
 
-#endif
+#endif // TEXSYN_PROCEDURAL_SAMPLING_H
