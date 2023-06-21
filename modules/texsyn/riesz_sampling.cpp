@@ -192,7 +192,7 @@ Array RieszSampling::precompute_sampler_realization(int realization_size, const 
 		TexSyn::ImageVector<float> c_realization;
 		c_realization.init(realization_size, n_quantification, 2);
 		TexSyn::ImageScalar<float> c_mask(classes);
-		c_mask.parallel_for_all_pixels([k](int pix) { pix = (pix == k) ? 1 : 0; });
+		c_mask.parallel_for_all_pixels([k](float &pix) { pix = (pix == k) ? 1 : 0; });
 
 		for (int q = 0; q < n_quantification; ++q)
 		{
