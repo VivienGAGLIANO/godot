@@ -27,6 +27,7 @@ public:
 	static Array quantize_texture(Ref<Image> image, Array extremum, int n_layers);
 	static Ref<Image> partition_image(const Ref<Image> &image, const PackedVector2Array &initial_centers);
 	static Array precompute_sampler_realization(int realization_size, const Array quantified_pc, int n_quantification, const Ref<Image> &classes, int n_classes);
+	static Ref<Image> stochastic_mean(const Ref<Image> &image, const Ref<Image> &pc, const Ref<Image> &classes, const Array &sampler_realization, int realization_size);
 
 protected:
 	static void _bind_methods();

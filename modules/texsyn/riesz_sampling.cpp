@@ -100,7 +100,6 @@ ImageScalar<T> phase_congruency(const RieszPyramid<T> &pyramid, int alpha, int b
 	return pc;
 }
 
-
 } // namespace RieszSampling
 } // namespace TexSyn
 
@@ -215,6 +214,38 @@ Array RieszSampling::precompute_sampler_realization(int realization_size, const 
 	return realizations;
 }
 
+Ref<Image> RieszSampling::stochastic_mean(const Ref<Image> &image, const Ref<Image> &pc, const Ref<Image> &classes, const Array &sampler_realization, int realization_size)
+{
+	TexSyn::ImageVector<double> mean;
+	mean.init(image->get_width(), image->get_height(), TexSyn::getNbDimensionsFromFormat(image->get_format()), true);
+
+	mean.parallel_for_all_images([&](TexSyn::ImageScalar<double> subImage, int d)
+	{
+		subImage.for_all_pixels([&](double &pix, int x, int y)
+		{
+			double pix_pc = pc->get_pixel((int)(x / (float) image->get_width() * pc->get_width()), (int)(y / (float) image->get_height() * pc->get_height())).r;
+			int pix_class = classes->get_pixel(x, y).r;
+
+			Object *realization_o = sampler_realization[pix_class];
+			Image *realization_class = static_cast<Image*>(realization_o);
+
+			for (double i = 0; i < 1; ++i)
+			{
+				const Color offset = realization_class->get_pixel(i, pix_pc);
+						//sampler_realization[pix_class].call("get_pixel", i, pix_pc);
+				const Vector2 offset_v = Vector2((int)offset.r*image->get_width(), (int)offset.g*image->get_height());
+				const Color pix_color = image->get_pixel(offset_v.x, offset_v.y); // TODO this returns wrong values around 0.05
+				pix += pix_color[d];
+			}
+			pix = pix * (1.0 / 1.0);
+		});
+	});
+
+	Ref<Image> mean_image = Image::create_empty(image->get_width(), image->get_height(), image->has_mipmaps(), image->get_format());
+	mean.toImage(mean_image);
+	return mean_image;
+
+}
 
 void RieszSampling::_bind_methods()
 {
@@ -222,4 +253,5 @@ void RieszSampling::_bind_methods()
 	ClassDB::bind_static_method("RieszSampling", D_METHOD("quantize_texture", "image", "extremum", "n_layers"), &RieszSampling::quantize_texture);
 	ClassDB::bind_static_method("RieszSampling", D_METHOD("partition_image", "image", "initial_centers"), &RieszSampling::partition_image);
 	ClassDB::bind_static_method("RieszSampling", D_METHOD("precompute_sampler_realization", "realization_size", "quantified_pc", "n_quantification", "classes", "n_classes"), &RieszSampling::precompute_sampler_realization);
+	ClassDB::bind_static_method("RieszSampling", D_METHOD("stochastic_mean", "image", "pc", "classes", "sampler_realization", "realization_size"), &RieszSampling::stochastic_mean);
 }

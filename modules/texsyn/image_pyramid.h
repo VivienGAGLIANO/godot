@@ -541,7 +541,7 @@ std::vector<typename RieszPyramid<T>::ImageVectorType> RieszPyramid<T>::pack_in_
     std::vector<ImageVectorType> packed_textures(3);
 	int width = 0,
         height = this->m_layers.at(0).fe.get_height();
-    for (const auto layer : this->m_layers)
+    for (const auto &layer : this->m_layers)
         width += layer.fe.get_width();
 
 
@@ -550,7 +550,7 @@ std::vector<typename RieszPyramid<T>::ImageVectorType> RieszPyramid<T>::pack_in_
     packed_textures[2].init(width, height, this->m_layers[0].fe.get_nbDimensions(), true);
 
     int x = 0;
-    for (const auto layer : this->m_layers)
+    for (const auto &layer : this->m_layers)
     {
         switch (system)
         {
