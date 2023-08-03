@@ -219,25 +219,24 @@ Ref<Image> RieszSampling::stochastic_mean(const Ref<Image> &image, const Ref<Ima
 	TexSyn::ImageVector<double> mean;
 	mean.init(image->get_width(), image->get_height(), TexSyn::getNbDimensionsFromFormat(image->get_format()), true);
 
-	mean.parallel_for_all_images([&](TexSyn::ImageScalar<double> subImage, int d)
+	mean.parallel_for_all_images([&](TexSyn::ImageScalar<double> &subImage, int d)
 	{
 		subImage.for_all_pixels([&](double &pix, int x, int y)
 		{
-			double pix_pc = pc->get_pixel((int)(x / (float) image->get_width() * pc->get_width()), (int)(y / (float) image->get_height() * pc->get_height())).r;
+			double pix_pc = pc->get_pixel(x / (float) image->get_width() * pc->get_width(), y / (float) image->get_height() * pc->get_height()).r;
 			int pix_class = classes->get_pixel(x, y).r;
 
 			Object *realization_o = sampler_realization[pix_class];
 			Image *realization_class = static_cast<Image*>(realization_o);
 
-			for (double i = 0; i < 1; ++i)
+			for (double i = 0; i < realization_size; ++i)
 			{
 				const Color offset = realization_class->get_pixel(i, pix_pc);
-						//sampler_realization[pix_class].call("get_pixel", i, pix_pc);
-				const Vector2 offset_v = Vector2((int)offset.r*image->get_width(), (int)offset.g*image->get_height());
-				const Color pix_color = image->get_pixel(offset_v.x, offset_v.y); // TODO this returns wrong values around 0.05
+				const Vector2 offset_v = Vector2(offset.r*image->get_width(), offset.g*image->get_height());
+				const Color pix_color = image->get_pixel(offset_v.x, offset_v.y);
 				pix += pix_color[d];
 			}
-			pix = pix * (1.0 / 1.0);
+			pix = pix * (1.0 / realization_size);
 		});
 	});
 
