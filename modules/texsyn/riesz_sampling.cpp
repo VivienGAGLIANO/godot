@@ -214,7 +214,7 @@ Array RieszSampling::precompute_sampler_realization(int realization_size, const 
 	return realizations;
 }
 
-Ref<Image> RieszSampling::stochastic_mean(const Ref<Image> &image, const Ref<Image> &pc, const Ref<Image> &classes, const Array &sampler_realization, int realization_size)
+Ref<Image> RieszSampling::stochastic_mean(const Ref<Image> &image, const Ref<Image> &pc, int n_subdivision, const Ref<Image> &classes, const Array &sampler_realization, int realization_size)
 {
 	TexSyn::ImageVector<double> mean;
 	mean.init(image->get_width(), image->get_height(), TexSyn::getNbDimensionsFromFormat(image->get_format()), true);
@@ -231,7 +231,7 @@ Ref<Image> RieszSampling::stochastic_mean(const Ref<Image> &image, const Ref<Ima
 
 			for (double i = 0; i < realization_size; ++i)
 			{
-				const Color offset = realization_class->get_pixel(i, pix_pc);
+				const Color offset = realization_class->get_pixel(i, pix_pc*n_subdivision);
 				const Vector2 offset_v = Vector2(offset.r*image->get_width(), offset.g*image->get_height());
 				const Color pix_color = image->get_pixel(offset_v.x, offset_v.y);
 				pix += pix_color[d];
@@ -252,5 +252,5 @@ void RieszSampling::_bind_methods()
 	ClassDB::bind_static_method("RieszSampling", D_METHOD("quantize_texture", "image", "extremum", "n_layers"), &RieszSampling::quantize_texture);
 	ClassDB::bind_static_method("RieszSampling", D_METHOD("partition_image", "image", "initial_centers"), &RieszSampling::partition_image);
 	ClassDB::bind_static_method("RieszSampling", D_METHOD("precompute_sampler_realization", "realization_size", "quantified_pc", "n_quantification", "classes", "n_classes"), &RieszSampling::precompute_sampler_realization);
-	ClassDB::bind_static_method("RieszSampling", D_METHOD("stochastic_mean", "image", "pc", "classes", "sampler_realization", "realization_size"), &RieszSampling::stochastic_mean);
+	ClassDB::bind_static_method("RieszSampling", D_METHOD("stochastic_mean", "image", "pc", "n_subdivision", "classes", "sampler_realization", "realization_size"), &RieszSampling::stochastic_mean);
 }
